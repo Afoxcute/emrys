@@ -18,7 +18,7 @@ const BridgePage: NextPage = () => {
 
   return (
     <div className="space-y-3 pt-4 flex flex-col min-h-[80vh]">
-      <div className="relative flex-grow">
+      <div className="relative flex-grow items-center jusify-center">
         {isTestnet ? (
           <TestnetBridge />
         ) : (
@@ -27,9 +27,6 @@ const BridgePage: NextPage = () => {
         <FloatingButtonStrip />
           </>
         )}
-      </div>
-      <div className="mt-auto">
-        <DisclaimerFooter />
       </div>
     </div>
   );
