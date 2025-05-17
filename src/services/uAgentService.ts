@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { logger } from '../utils/logger';
 
 // Replace with your actual deployed Railway URL
 const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'https://your-protocol-agent-production.up.railway.app';
 
 export interface ProtocolInfo {
   timestamp: number;
-  protocol_name: string;
+  protocolName: string;
   information: string;
   agent_address: string;
 }
@@ -23,11 +24,11 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
   try {
     const response = await axios.post<ProtocolInfo>(
       `${UAGENT_BASE_URL}/protocol/info`, 
-      { protocol_name: protocolName }
+      { protocolName: protocolName }
     );
     return response.data.information;
   } catch (error) {
-    console.error('Error fetching protocol info:', error);
+    logger.error('Error fetching protocol info:', error);
     throw new Error('Failed to fetch protocol information');
   }
 }
@@ -42,7 +43,7 @@ export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching protocols list:', error);
+    logger.error('Error fetching protocols list:', error);
     throw new Error('Failed to fetch protocols list');
   }
 }
@@ -55,7 +56,7 @@ export async function checkUAgentHealth(): Promise<boolean> {
     const response = await axios.get(`${UAGENT_BASE_URL}/health`);
     return response.data.status === 'healthy';
   } catch (error) {
-    console.error('Error checking uAgent health:', error);
+    logger.error('Error checking uAgent health:', error);
     return false;
   }
 } 

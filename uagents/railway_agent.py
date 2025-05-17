@@ -1,6 +1,6 @@
 import time
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 # Try to load .env file if available
 try:
@@ -14,7 +14,8 @@ from model import get_protocol_info, BLOCKCHAIN_TECHNOLOGIES
 
 # Define models for requests and responses
 class ProtocolInfoRequest(Model):
-    protocol_name: str
+    protocol_name: Optional[str] = None
+    protocolName: Optional[str] = None
 
 class ProtocolInfoResponse(Model):
     timestamp: int
@@ -66,14 +67,16 @@ async def handle_health_check(ctx: Context) -> Dict[str, Any]:
 @agent.on_rest_post("/protocol/info", ProtocolInfoRequest, ProtocolInfoResponse)
 async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> ProtocolInfoResponse:
     """Endpoint to get information about a specific DeFi protocol."""
-    ctx.logger.info(f"Received protocol info request for: {req.protocol_name}")
+    # Use either protocol_name or protocolName, preferring protocolName if provided
+    protocol_name = req.protocolName if req.protocolName is not None else req.protocol_name
+    ctx.logger.info(f"Received protocol info request for: {protocol_name}")
     
     # Get protocol information using the existing function
-    info = await get_protocol_info(req.protocol_name)
+    info = await get_protocol_info(protocol_name)
     
     return ProtocolInfoResponse(
         timestamp=int(time.time()),
-        protocol_name=req.protocol_name,
+        protocol_name=protocol_name,
         information=info,
         agent_address=ctx.agent.address
     )

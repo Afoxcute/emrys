@@ -1,6 +1,7 @@
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { useEffect, useRef, useState } from 'react';
 import { checkUAgentHealth, fetchProtocolInfo, fetchProtocolsList } from '../../services/uAgentService';
+import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
 
 type Message = {
@@ -51,49 +52,50 @@ const faqData = [
 
 export default function FaqChat() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "👋 Hi there! I'm Emrys Assistant powered by fetch.ai uAgents. How can I help you today?", isUser: false }
+    { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false }
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [suggestedQuestions, setSuggestedQuestions] = useState(faqData.map(item => item.question));
+  const [suggestedQuestions] = useState(faqData.map(item => item.question));
   const [protocolNames, setProtocolNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uAgentAvailable, setUAgentAvailable] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Check uAgent availability on component mount
+  // Check if uAgent is available
   useEffect(() => {
-    const checkAgent = async () => {
-      try {
-        const isHealthy = await checkUAgentHealth();
-        setUAgentAvailable(isHealthy);
-        
-        if (isHealthy) {
-          const protocolsData = await fetchProtocolsList();
-          // Convert the protocols object to an array of names
-          const names = Object.values(protocolsData.protocols);
-          setProtocolNames(names);
-          
-          // Add protocol-related suggested questions
-          setSuggestedQuestions(prev => [
-            ...prev,
-            "Tell me about Solana",
-            "What is SVM?",
-            "Explain IBC"
-          ]);
-        }
-      } catch (error) {
-        console.error("Error checking uAgent:", error);
-        setUAgentAvailable(false);
-      }
-    };
-    
     checkAgent();
   }, []);
+
+  // Get protocol names when uAgent is available
+  useEffect(() => {
+    if (uAgentAvailable) {
+      fetchProtocolsList()
+        .then((data) => {
+          if (data && data.protocols) {
+            setProtocolNames(Object.keys(data.protocols));
+          }
+        })
+        .catch((error) => {
+          logger.error("Error fetching protocols list:", error);
+        });
+    }
+  }, [uAgentAvailable]);
+
+  const checkAgent = async () => {
+    try {
+      const isHealthy = await checkUAgentHealth();
+      setUAgentAvailable(isHealthy);
+    } catch (error) {
+      logger.error("Error checking uAgent health:", error);
+      setUAgentAvailable(false);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -103,37 +105,29 @@ export default function FaqChat() {
   };
 
   const handleQuestionClick = (question: string) => {
-    addMessage(question, true);
-    processQuestion(question);
+    setInputValue(question);
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (inputValue.trim() === '') return;
     
     addMessage(inputValue, true);
+    setIsLoading(true);
     processQuestion(inputValue);
     setInputValue('');
   };
 
   const processQuestion = async (question: string) => {
-    setIsLoading(true);
-    
-    // First check if it's a standard FAQ question
-    const faqItem = faqData.find(item => 
-      item.question.toLowerCase() === question.toLowerCase()
-    );
-    
-    if (faqItem) {
-      setTimeout(() => {
-        addMessage(faqItem.answer, false);
-        setIsLoading(false);
-      }, 500);
+    // Basic validation
+    if (!question || question.trim() === '') {
+      setIsLoading(false);
       return;
     }
     
     // If uAgent is available, try to get blockchain protocol information
-    if (uAgentAvailable) {
+    if (uAgentAvailable && protocolNames.length > 0) {
       try {
         // Extract potential protocol name from question
         const words = question.toLowerCase().split(/\s+/);
@@ -141,13 +135,30 @@ export default function FaqChat() {
           word.length > 2 && !["what", "how", "is", "are", "the", "a", "an", "and", "or", "but", "for", "with", "about", "tell", "me", "explain", "works"].includes(word)
         );
         
+        // First check exact matches with known protocol names
+        const matchedProtocol = potentialProtocols.find(term => 
+          protocolNames.some(protocol => protocol.toLowerCase() === term)
+        );
+        
+        if (matchedProtocol) {
+          try {
+            const info = await fetchProtocolInfo(matchedProtocol);
+            addMessage(info, false);
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
+          }
+        }
+        
+        // Then try each potential term
         for (const term of potentialProtocols) {
           try {
             const info = await fetchProtocolInfo(term);
             addMessage(info, false);
             setIsLoading(false);
             return;
-          } catch (error) {
+          } catch (_error) {
             continue;
           }
         }
@@ -155,7 +166,7 @@ export default function FaqChat() {
         // If no specific protocol found, handle as a general question
         handleGeneralQuestion(question);
       } catch (error) {
-        console.error("Error processing with uAgent:", error);
+        logger.error("Error processing with uAgent:", error);
         handleGeneralQuestion(question);
       }
     } else {

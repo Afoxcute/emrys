@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { SolidButton } from '../components/buttons/SolidButton';
 import { Card } from '../components/layout/Card';
 import { DisclaimerFooter } from '../components/nav/DisclaimerFooter';
+import { logger } from '../utils/logger';
 
 // Chain configuration with native token information
 const chainConfigs = {
@@ -96,7 +97,7 @@ export default function TestnetBridge() {
       setRecipientAddress('');
       setCurrentStep('');
     } catch (error) {
-      console.error('Bridge error:', error);
+      logger.error('Bridge error:', error);
       toast.error('An error occurred during the bridging process');
     } finally {
       setIsLoading(false);
