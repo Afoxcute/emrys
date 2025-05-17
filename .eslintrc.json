@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": ["src/pages/testnet-bridge.tsx"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+} 
