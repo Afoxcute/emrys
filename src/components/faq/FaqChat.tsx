@@ -1,4 +1,7 @@
+import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { useEffect, useRef, useState } from 'react';
+import { checkUAgentHealth, fetchProtocolInfo, fetchProtocolsList } from '../../services/uAgentService';
+import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
 
 type Message = {
@@ -7,6 +10,7 @@ type Message = {
   isUser: boolean;
 };
 
+// Standard FAQ data for basic questions
 const faqData = [
   {
     question: "What is Emrys?",
@@ -48,16 +52,50 @@ const faqData = [
 
 export default function FaqChat() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "👋 Hi there! I'm Emrys Assistant powered by fetch.ai uAgents. How can I help you today?", isUser: false }
+    { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false }
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [suggestedQuestions, setSuggestedQuestions] = useState(faqData.map(item => item.question));
+  const [suggestedQuestions] = useState(faqData.map(item => item.question));
+  const [protocolNames, setProtocolNames] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [uAgentAvailable, setUAgentAvailable] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Check if uAgent is available
+  useEffect(() => {
+    checkAgent();
+  }, []);
+
+  // Get protocol names when uAgent is available
+  useEffect(() => {
+    if (uAgentAvailable) {
+      fetchProtocolsList()
+        .then((data) => {
+          if (data && data.protocols) {
+            setProtocolNames(Object.keys(data.protocols));
+          }
+        })
+        .catch((error) => {
+          logger.error("Error fetching protocols list:", error);
+        });
+    }
+  }, [uAgentAvailable]);
+
+  const checkAgent = async () => {
+    try {
+      const isHealthy = await checkUAgentHealth();
+      setUAgentAvailable(isHealthy);
+    } catch (error) {
+      logger.error("Error checking uAgent health:", error);
+      setUAgentAvailable(false);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -67,34 +105,77 @@ export default function FaqChat() {
   };
 
   const handleQuestionClick = (question: string) => {
-    addMessage(question, true);
-    
-    setTimeout(() => {
-      const faqItem = faqData.find(item => 
-        item.question.toLowerCase() === question.toLowerCase()
-      );
-      
-      if (faqItem) {
-        addMessage(faqItem.answer, false);
-      } else {
-        handleCustomQuestion(question);
-      }
-      
-      // Reset suggested questions after answering
-      setSuggestedQuestions(faqData.map(item => item.question));
-    }, 500);
+    setInputValue(question);
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (inputValue.trim() === '') return;
     
     addMessage(inputValue, true);
-    handleCustomQuestion(inputValue);
+    setIsLoading(true);
+    processQuestion(inputValue);
     setInputValue('');
   };
 
-  const handleCustomQuestion = (question: string) => {
+  const processQuestion = async (question: string) => {
+    // Basic validation
+    if (!question || question.trim() === '') {
+      setIsLoading(false);
+      return;
+    }
+    
+    // If uAgent is available, try to get blockchain protocol information
+    if (uAgentAvailable && protocolNames.length > 0) {
+      try {
+        // Extract potential protocol name from question
+        const words = question.toLowerCase().split(/\s+/);
+        const potentialProtocols = words.filter(word => 
+          word.length > 2 && !["what", "how", "is", "are", "the", "a", "an", "and", "or", "but", "for", "with", "about", "tell", "me", "explain", "works"].includes(word)
+        );
+        
+        // First check exact matches with known protocol names
+        const matchedProtocol = potentialProtocols.find(term => 
+          protocolNames.some(protocol => protocol.toLowerCase() === term)
+        );
+        
+        if (matchedProtocol) {
+          try {
+            const info = await fetchProtocolInfo(matchedProtocol);
+            addMessage(info, false);
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
+          }
+        }
+        
+        // Then try each potential term
+        for (const term of potentialProtocols) {
+          try {
+            const info = await fetchProtocolInfo(term);
+            addMessage(info, false);
+            setIsLoading(false);
+            return;
+          } catch (_error) {
+            continue;
+          }
+        }
+        
+        // If no specific protocol found, handle as a general question
+        handleGeneralQuestion(question);
+      } catch (error) {
+        logger.error("Error processing with uAgent:", error);
+        handleGeneralQuestion(question);
+      }
+    } else {
+      // Fall back to basic keyword matching if uAgent isn't available
+      handleGeneralQuestion(question);
+    }
+  };
+
+  const handleGeneralQuestion = (question: string) => {
     const lowerQuestion = question.toLowerCase();
     
     // Simple keyword matching
@@ -138,6 +219,8 @@ export default function FaqChat() {
         addMessage("I don't have specific information about that yet. You might want to check out our documentation or contact support for more details.", false);
       }
     }
+    
+    setIsLoading(false);
   };
 
   const addMessage = (text: string, isUser: boolean) => {
@@ -153,7 +236,12 @@ export default function FaqChat() {
       <div className="flex flex-col h-96">
         <div className="flex items-center p-3 bg-primary-500 text-white">
           <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
-          <h3 className="font-medium">Emrys FAQ Assistant <span className="text-xs opacity-75">(Powered by fetch.ai uAgents)</span></h3>
+          <h3 className="font-medium">
+            Emrys FAQ Assistant 
+            <span className="text-xs opacity-75 ml-2">
+              (Powered by fetch.ai uAgents{uAgentAvailable ? ' - Connected' : ' - Offline'})
+            </span>
+          </h3>
         </div>
         
         <div className="flex-1 p-4 overflow-y-auto">
@@ -174,6 +262,14 @@ export default function FaqChat() {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="flex items-center space-x-2 p-3 bg-gray-100 rounded-lg rounded-bl-none">
+                  <SpinnerIcon className="h-5 w-5 text-primary-500" />
+                  <span className="text-sm text-gray-600">Thinking...</span>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
           
@@ -181,7 +277,7 @@ export default function FaqChat() {
             <div className="mt-4">
               <p className="text-sm text-gray-500 mb-2">Suggested questions:</p>
               <div className="flex flex-wrap gap-2">
-                {suggestedQuestions.slice(0, 3).map((question, index) => (
+                {suggestedQuestions.slice(0, 5).map((question, index) => (
                   <button
                     key={index}
                     onClick={() => handleQuestionClick(question)}
@@ -196,12 +292,14 @@ export default function FaqChat() {
                 >
                   What is Walrus storage?
                 </button>
-                <button
-                  onClick={() => handleQuestionClick("What technology powers this chat assistant?")}
-                  className="text-sm bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 text-gray-700 transition-colors"
-                >
-                  About this AI assistant
-                </button>
+                {uAgentAvailable && (
+                  <button
+                    onClick={() => handleQuestionClick("Tell me about blockchain technologies")}
+                    className="text-sm bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 text-gray-700 transition-colors"
+                  >
+                    Blockchain technologies
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -215,9 +313,10 @@ export default function FaqChat() {
               onChange={handleInputChange}
               placeholder="Ask me anything about Emrys..."
               className="flex-1 py-2 px-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={isLoading}
             />
-            <SolidButton type="submit" color="accent" className="px-4">
-              Send
+            <SolidButton type="submit" color="accent" className="px-4" disabled={isLoading}>
+              {isLoading ? <SpinnerIcon className="h-5 w-5" /> : 'Send'}
             </SolidButton>
           </div>
         </form>

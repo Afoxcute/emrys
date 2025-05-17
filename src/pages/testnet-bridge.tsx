@@ -148,7 +148,6 @@ export default function TestnetBridge() {
               />
             </div>
           </div>
-
           <div className="mb-4">
             <label className="block pl-0.5 text-sm text-gray-600">Token</label>
             <div className="mt-1.5 flex items-center rounded-lg border border-primary-300 px-2.5 py-2.5">
@@ -160,7 +159,6 @@ export default function TestnetBridge() {
               <div className="ml-2 font-medium text-gray-700">SOL</div>
             </div>
           </div>
-
           <div className="mb-4">
             <label className="block pl-0.5 text-sm text-gray-600">Amount</label>
             <div className="relative mt-1.5">
@@ -177,7 +175,6 @@ export default function TestnetBridge() {
               </div>
             </div>
           </div>
-
           <div className="mb-6">
             <label className="block pl-0.5 text-sm text-gray-600">Recipient Solana Address</label>
             <div className="relative mt-1.5">
