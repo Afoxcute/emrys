@@ -2,6 +2,7 @@ import time
 import os
 from typing import Any, Dict, Optional, List
 from enum import Enum
+from fastapi.middleware.cors import CORSMiddleware
 
 # Try to load .env file if available
 try:
@@ -48,39 +49,40 @@ agent = Agent(
     log_level=LOG_LEVEL
 )
 
-# Configure CORS middleware for the agent
-@agent.middleware
-async def cors_middleware(request, handler):
-    """
-    CORS middleware to allow requests from any origin
-    Required to respond to browser-based requests
-    """
-    orig_response = await handler(request)
-
-    headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    }
-
-    # If original response has headers, preserve them
-    if hasattr(orig_response, "headers"):
-        for name, value in headers.items():
-            orig_response.headers[name] = value
-        return orig_response
-    
-    return orig_response
+# Configure CORS for the FastAPI app (needs to be done after the agent is created)
+# This is a workaround since we can't use the middleware decorator
+# We'll access the underlying FastAPI app that the agent uses
+@agent.on_event("startup")
+async def configure_cors():
+    # Access the FastAPI app and add CORS middleware
+    # Note: This is implementation specific and might need adjustment
+    # based on how uAgents actually exposes the FastAPI app
+    if hasattr(agent, "app"):
+        agent.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
 @agent.on_rest_get("/health", Model)
 async def handle_health_check(ctx: Context) -> Dict[str, Any]:
     """
     Health check endpoint to verify that the agent is running
     """
-    return {
+    response = {
         "status": "healthy",
         "timestamp": int(time.time()),
         "agent_address": ctx.agent.address,
     }
+    
+    # Manually add CORS headers
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
+    return response
 
 @agent.on_rest_post("/protocol/info", ProtocolInfoRequest, ProtocolInfoResponse)
 async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> ProtocolInfoResponse:
@@ -93,6 +95,11 @@ async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> Protoc
     ctx.logger.info(f"Received request for protocol: {protocol_name}")
     
     protocol_info = await get_protocol_info(protocol_name)
+    
+    # Manually add CORS headers
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     
     return ProtocolInfoResponse(
         timestamp=int(time.time()),
@@ -118,6 +125,11 @@ async def handle_list_protocols(ctx: Context) -> Dict[str, Any]:
         "fantom": "Fantom Opera network",
     }
     
+    # Manually add CORS headers
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
     return {
         "timestamp": int(time.time()),
         "protocols": protocols,
@@ -134,6 +146,11 @@ async def handle_faq_question(ctx: Context, req: ChatRequest) -> ChatResponse:
     # Get response from the FAQ function in model.py
     answer, suggested_questions = await get_faq_response(req.question)
     
+    # Manually add CORS headers
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
     return ChatResponse(
         timestamp=int(time.time()),
         answer=answer,
@@ -148,16 +165,32 @@ async def handle_tokens_info(ctx: Context) -> Dict[str, Any]:
     """
     tokens_info = await get_tokens_info()
     
+    # Manually add CORS headers
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
     return {
         "timestamp": int(time.time()),
         "tokens": tokens_info,
         "count": len(tokens_info),
     }
 
+@agent.on_event("options")
+async def handle_options(ctx: Context):
+    """
+    Handle OPTIONS requests for CORS preflight
+    """
+    ctx.response.headers["Access-Control-Allow-Origin"] = "*"
+    ctx.response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    ctx.response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return {}
+
 if __name__ == "__main__":
     print(f"Starting Protocol Info Agent on port {PORT}")
     print(f"Health check available at: http://localhost:{PORT}/health")
     print(f"Protocol list available at: http://localhost:{PORT}/protocols/list")
     print(f"Protocol info endpoint: http://localhost:{PORT}/protocol/info")
+    print(f"Chat FAQ endpoint: http://localhost:{PORT}/chat/faq")
     print(f"CORS is enabled for all origins")
     agent.run() 
