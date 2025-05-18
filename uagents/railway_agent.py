@@ -9,6 +9,9 @@ try:
 except ImportError:
     pass
 
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from uagents import Agent, Context, Model
 from model import get_protocol_info, BLOCKCHAIN_TECHNOLOGIES
 
@@ -35,50 +38,49 @@ class ChatQuestionResponse(Model):
 # Create the agent with environment variables for Railway deployment
 PORT = int(os.environ.get("PORT", 8000))
 SEED = os.environ.get("AGENT_SEED", "emrys_protocol_info_agent_seed")
-ENDPOINT = os.environ.get("AGENT_ENDPOINT", f"http://emrys-production.up.railway.app:8080/submit")
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
 
+# Create a FastAPI app
+app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Create the agent
 agent = Agent(
     name="Protocol Info Agent",
     seed=SEED,
     port=PORT,
-    endpoint=[ENDPOINT],
+    endpoint=[f"{BASE_URL}/submit"],
     log_level=LOG_LEVEL
 )
 
-# Configure CORS middleware for the agent
-@agent.middleware
-async def cors_middleware(request, handler):
-    """Add CORS headers to all responses."""
-    response = await handler(request)
-    
-    # Add CORS headers
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    
-    # Handle preflight requests
-    if request.method == "OPTIONS":
-        return response
-    
-    return response
-
-@agent.on_rest_get("/health", Model)
-async def handle_health_check(ctx: Context) -> Dict[str, Any]:
-    """Health check endpoint for monitoring."""
-    ctx.logger.info("Health check requested")
+# Health check endpoint
+@app.get("/health")
+async def health_check():
     return {
         "status": "healthy",
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
+        "agent_name": agent.name,
+        "agent_address": agent.address,
     }
 
-@agent.on_rest_post("/protocol/info", ProtocolInfoRequest, ProtocolInfoResponse)
-async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> ProtocolInfoResponse:
-    """Endpoint to get information about a specific DeFi protocol."""
+# Protocol info endpoint
+@app.post("/protocol/info", response_model=ProtocolInfoResponse)
+async def protocol_info(req: ProtocolInfoRequest):
     # Use either protocol_name or protocolName, preferring protocolName if provided
     protocol_name = req.protocolName if req.protocolName is not None else req.protocol_name
-    ctx.logger.info(f"Received protocol info request for: {protocol_name}")
+    if not protocol_name:
+        raise ValueError("Protocol name is required")
+    
+    print(f"Received protocol info request for: {protocol_name}")
     
     # Get protocol information using the existing function
     info = await get_protocol_info(protocol_name)
@@ -87,13 +89,13 @@ async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> Protoc
         timestamp=int(time.time()),
         protocol_name=protocol_name,
         information=info,
-        agent_address=ctx.agent.address
+        agent_address=agent.address
     )
 
-@agent.on_rest_get("/protocols/list", Model)
-async def handle_list_protocols(ctx: Context) -> Dict[str, Any]:
-    """Endpoint to list all available protocols."""
-    ctx.logger.info("Protocol list requested")
+# Protocols list endpoint
+@app.get("/protocols/list")
+async def list_protocols():
+    print("Protocol list requested")
     protocols = {key: tech.get('name', key) for key, tech in BLOCKCHAIN_TECHNOLOGIES.items()}
     
     return {
@@ -102,8 +104,9 @@ async def handle_list_protocols(ctx: Context) -> Dict[str, Any]:
         "count": len(protocols)
     }
 
-@agent.on_rest_post("/chat/question", ChatQuestionRequest, ChatQuestionResponse)
-async def handle_chat_question(ctx: Context, req: ChatQuestionRequest) -> ChatQuestionResponse:
+# Chat question endpoint
+@app.post("/chat/question", response_model=ChatQuestionResponse)
+async def chat_question(req: ChatQuestionRequest):
     """
     Endpoint to handle chat questions and provide responses.
     """
@@ -111,7 +114,7 @@ async def handle_chat_question(ctx: Context, req: ChatQuestionRequest) -> ChatQu
     if not question:
         raise ValueError("Question is required")
 
-    ctx.logger.info(f"Received chat question: {question}")
+    print(f"Received chat question: {question}")
     
     # Generate response based on the question
     # First check if it's about a specific blockchain protocol
@@ -126,10 +129,10 @@ async def handle_chat_question(ctx: Context, req: ChatQuestionRequest) -> ChatQu
                     timestamp=int(time.time()),
                     question=question,
                     answer=answer,
-                    agent_address=ctx.agent.address,
+                    agent_address=agent.address,
                 )
             except Exception as e:
-                ctx.logger.error(f"Error getting protocol info: {e}")
+                print(f"Error getting protocol info: {e}")
                 break
     
     # Otherwise, provide a general response based on keywords
@@ -154,13 +157,16 @@ async def handle_chat_question(ctx: Context, req: ChatQuestionRequest) -> ChatQu
         timestamp=int(time.time()),
         question=question,
         answer=answer,
-        agent_address=ctx.agent.address,
+        agent_address=agent.address,
     )
 
 if __name__ == "__main__":
     print(f"Starting Protocol Info Agent on port {PORT}")
-    print(f"Health check available at: http://emrys-production.up.railway.app:8080/health")
-    print(f"Protocol list available at: http://emrys-production.up.railway.app:8080/protocols/list")
-    print(f"Protocol info endpoint: http://emrys-production.up.railway.app:8080/protocol/info")
+    print(f"Health check available at: {BASE_URL}/health")
+    print(f"Protocol list available at: {BASE_URL}/protocols/list")
+    print(f"Protocol info endpoint: {BASE_URL}/protocol/info")
+    print(f"Chat question endpoint: {BASE_URL}/chat/question")
     print(f"CORS is enabled for all origins")
-    agent.run() 
+    
+    # Run with uvicorn directly
+    uvicorn.run(app, host="0.0.0.0", port=PORT) 
