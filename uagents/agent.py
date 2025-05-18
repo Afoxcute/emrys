@@ -1,14 +1,27 @@
 import os
 from enum import Enum
+from typing import Dict, Any
+import time
 
 from uagents import Agent, Context, Model
 from uagents.experimental.quota import QuotaProtocol, RateLimit
 from uagents_core.models import ErrorMessage
 
 from chat_proto import chat_proto, struct_output_client_proto
-from model import get_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse
+from model import get_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse, BLOCKCHAIN_TECHNOLOGIES
 
-agent = Agent()
+# Get environment variables for Railway deployment
+PORT = int(os.environ.get("PORT", 8080))
+HOST = os.environ.get("HOST", "0.0.0.0")
+AGENT_SEED = os.environ.get("AGENT_SEED", "emrys_protocol_agent_seed_phrase")
+
+# Configure the agent with port and endpoint for REST API
+agent = Agent(
+    name="EmrysProtocolAgent",
+    port=PORT,
+    endpoint=[f"http://{HOST}:{PORT}/submit"],
+    seed=AGENT_SEED
+)
 
 proto = QuotaProtocol(
     storage_reference=agent.storage,
@@ -43,7 +56,8 @@ def agent_is_healthy() -> bool:
         import asyncio
         asyncio.run(get_protocol_info("solana"))
         return True
-    except Exception:
+    except Exception as e:
+        agent.logger.error(f"Health check failed: {str(e)}")
         return False
 
 class HealthCheck(Model):
@@ -76,5 +90,104 @@ agent.include(health_protocol, publish_manifest=True)
 agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
+# REST API Models
+class ProtocolInfoRequest(Model):
+    protocolName: str
+
+class ProtocolInfoResponse(Model):
+    timestamp: int
+    protocolName: str
+    information: str
+    agent_address: str
+
+class ProtocolsListResponse(Model):
+    timestamp: int
+    protocols: Dict[str, str]
+    count: int
+
+class HealthResponse(Model):
+    status: str
+    timestamp: int
+    agent_name: str
+
+# REST API endpoints
+@agent.on_rest_post("/protocol/info", ProtocolInfoRequest, ProtocolInfoResponse)
+async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> ProtocolInfoResponse:
+    ctx.logger.info(f"REST API: Received request for protocol info: {req.protocolName}")
+    try:
+        info = await get_protocol_info(req.protocolName)
+        return ProtocolInfoResponse(
+            timestamp=int(time.time()),
+            protocolName=req.protocolName,
+            information=info,
+            agent_address=ctx.agent.address
+        )
+    except Exception as err:
+        ctx.logger.error(f"Error fetching protocol info: {err}")
+        # Return error information in a structured way
+        return ProtocolInfoResponse(
+            timestamp=int(time.time()),
+            protocolName=req.protocolName,
+            information=f"Error: {str(err)}",
+            agent_address=ctx.agent.address
+        )
+
+@agent.on_rest_get("/protocols/list", ProtocolsListResponse)
+async def handle_protocols_list(ctx: Context) -> Dict[str, Any]:
+    ctx.logger.info("REST API: Received request for protocols list")
+    try:
+        # Use the technologies from the BLOCKCHAIN_TECHNOLOGIES dictionary
+        protocols = {key: tech['name'] for key, tech in BLOCKCHAIN_TECHNOLOGIES.items()}
+        
+        return {
+            "timestamp": int(time.time()),
+            "protocols": protocols,
+            "count": len(protocols)
+        }
+    except Exception as err:
+        ctx.logger.error(f"Error fetching protocols list: {err}")
+        return {
+            "timestamp": int(time.time()),
+            "protocols": {},
+            "count": 0
+        }
+
+@agent.on_rest_get("/health", HealthResponse)
+async def handle_health(ctx: Context) -> Dict[str, Any]:
+    ctx.logger.info("REST API: Received health check request")
+    try:
+        is_healthy = agent_is_healthy()
+        status = "healthy" if is_healthy else "unhealthy"
+    except Exception as err:
+        ctx.logger.error(f"Error checking health: {err}")
+        status = "unhealthy"
+    
+    return {
+        "status": status,
+        "timestamp": int(time.time()),
+        "agent_name": "emrys_technology_agent"
+    }
+
+# Handle OPTIONS requests for CORS preflight
+@agent.on_rest_options("/*", None, None)
+async def handle_options(ctx: Context) -> Dict[str, Any]:
+    return {}
+
+# Enable CORS for the REST endpoints
+@agent.middleware
+async def cors_middleware(request, handler):
+    response = await handler(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
+
+# Handle startup event
+@agent.on_event("startup")
+async def startup():
+    agent.logger.info(f"Emrys Protocol Agent starting on {HOST}:{PORT}")
+    agent.logger.info(f"REST endpoints available at http://{HOST}:{PORT}/")
+    agent.logger.info(f"Health check endpoint: http://{HOST}:{PORT}/health")
+
 if __name__ == "__main__":
-    agent.run() 
+    agent.run(host=HOST, port=PORT) 

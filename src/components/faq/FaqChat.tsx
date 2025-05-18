@@ -1,13 +1,11 @@
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
+import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import {
-  checkUAgentHealth,
-  fetchProtocolInfo,
-  fetchProtocolsList,
-  sendChatQuestion,
-} from '../../services/uAgentService';
 import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
+
+// Get the base URL from environment variables
+const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'http://localhost:8000';
 
 type Message = {
   id: number;
@@ -15,7 +13,7 @@ type Message = {
   isUser: boolean;
 };
 
-// Standard FAQ data for basic questions (used as fallback if agent is not available)
+// Standard FAQ data for basic questions
 const faqData = [
   {
     question: 'What is Emrys?',
@@ -69,9 +67,7 @@ export default function FaqChat() {
     { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [suggestedQuestions, setSuggestedQuestions] = useState(
-    faqData.map((item) => item.question),
-  );
+  const [suggestedQuestions] = useState(faqData.map((item) => item.question));
   const [protocolNames, setProtocolNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uAgentAvailable, setUAgentAvailable] = useState(false);
@@ -85,10 +81,12 @@ export default function FaqChat() {
   // Get protocol names when uAgent is available
   useEffect(() => {
     if (uAgentAvailable) {
-      fetchProtocolsList()
-        .then((data) => {
-          if (data && data.protocols) {
-            setProtocolNames(Object.keys(data.protocols));
+      // Using the REST endpoint directly
+      axios
+        .get(`${UAGENT_BASE_URL}/protocols/list`)
+        .then((response) => {
+          if (response.data && response.data.protocols) {
+            setProtocolNames(Object.keys(response.data.protocols));
           }
         })
         .catch((error) => {
@@ -99,8 +97,9 @@ export default function FaqChat() {
 
   const checkAgent = async () => {
     try {
-      const isHealthy = await checkUAgentHealth();
-      setUAgentAvailable(isHealthy);
+      // Using the REST endpoint directly
+      const response = await axios.get(`${UAGENT_BASE_URL}/health`);
+      setUAgentAvailable(response.data.status === 'healthy');
     } catch (error) {
       logger.error('Error checking uAgent health:', error);
       setUAgentAvailable(false);
@@ -142,26 +141,9 @@ export default function FaqChat() {
       return;
     }
 
-    try {
-      // Use uAgent chat API if available
-      if (uAgentAvailable) {
-        const response = await sendChatQuestion(question);
-        if (response && response.answer) {
-          addMessage(response.answer, false);
-
-          // Update suggested questions if provided
-          if (response.suggested_questions && response.suggested_questions.length > 0) {
-            setSuggestedQuestions(response.suggested_questions);
-          }
-
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // If uAgent is unavailable or response failed, fall back to local processing
-      // First try to get protocol information if relevant
-      if (uAgentAvailable && protocolNames.length > 0) {
+    // If uAgent is available, try to get blockchain protocol information
+    if (uAgentAvailable && protocolNames.length > 0) {
+      try {
         // Extract potential protocol name from question
         const words = question.toLowerCase().split(/\s+/);
         const potentialProtocols = words.filter(
@@ -195,8 +177,11 @@ export default function FaqChat() {
 
         if (matchedProtocol) {
           try {
-            const info = await fetchProtocolInfo(matchedProtocol);
-            addMessage(info, false);
+            // Using the REST endpoint directly
+            const response = await axios.post(`${UAGENT_BASE_URL}/protocol/info`, {
+              protocolName: matchedProtocol,
+            });
+            addMessage(response.data.information, false);
             setIsLoading(false);
             return;
           } catch (error) {
@@ -207,20 +192,26 @@ export default function FaqChat() {
         // Then try each potential term
         for (const term of potentialProtocols) {
           try {
-            const info = await fetchProtocolInfo(term);
-            addMessage(info, false);
+            // Using the REST endpoint directly
+            const response = await axios.post(`${UAGENT_BASE_URL}/protocol/info`, {
+              protocolName: term,
+            });
+            addMessage(response.data.information, false);
             setIsLoading(false);
             return;
           } catch (_error) {
             continue;
           }
         }
-      }
 
-      // If we get here, use the local fallback
-      handleGeneralQuestion(question);
-    } catch (error) {
-      logger.error('Error processing question:', error);
+        // If no specific protocol found, handle as a general question
+        handleGeneralQuestion(question);
+      } catch (error) {
+        logger.error('Error processing with uAgent:', error);
+        handleGeneralQuestion(question);
+      }
+    } else {
+      // Fall back to basic keyword matching if uAgent isn't available
       handleGeneralQuestion(question);
     }
   };

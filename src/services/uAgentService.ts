@@ -1,10 +1,15 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
-// Replace with your actual deployed Railway URL
-const UAGENT_BASE_URL =
-  process.env.NEXT_PUBLIC_UAGENT_URL || 'https://your-protocol-agent-production.up.railway.app';
+// Get the uAgent base URL from environment variables with a fallback to localhost for development
+const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'http://localhost:8000';
 
+/**
+ * Response interface for protocol information
+ *
+ * @endpoint POST /protocol/info
+ * @request { protocolName: string }
+ */
 export interface ProtocolInfo {
   timestamp: number;
   protocolName: string;
@@ -12,21 +17,23 @@ export interface ProtocolInfo {
   agent_address: string;
 }
 
+/**
+ * Response interface for protocols list
+ *
+ * @endpoint GET /protocols/list
+ */
 export interface ProtocolsListResponse {
   timestamp: number;
   protocols: Record<string, string>;
   count: number;
 }
 
-export interface ChatResponse {
-  timestamp: number;
-  answer: string;
-  suggested_questions?: string[];
-  agent_address: string;
-}
-
 /**
  * Fetch information about a specific blockchain protocol from the uAgent
+ *
+ * @endpoint POST /protocol/info
+ * @example
+ * const info = await fetchProtocolInfo('solana');
  */
 export async function fetchProtocolInfo(protocolName: string): Promise<string> {
   try {
@@ -42,6 +49,10 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
 
 /**
  * Get list of all available protocols from the uAgent
+ *
+ * @endpoint GET /protocols/list
+ * @example
+ * const protocols = await fetchProtocolsList();
  */
 export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   try {
@@ -54,20 +65,11 @@ export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
 }
 
 /**
- * Send a chat question to the uAgent and get a response
- */
-export async function sendChatQuestion(question: string): Promise<ChatResponse> {
-  try {
-    const response = await axios.post<ChatResponse>(`${UAGENT_BASE_URL}/chat/faq`, { question });
-    return response.data;
-  } catch (error) {
-    logger.error('Error sending chat question:', error);
-    throw new Error('Failed to get chat response');
-  }
-}
-
-/**
  * Check if the uAgent service is healthy
+ *
+ * @endpoint GET /health
+ * @example
+ * const isHealthy = await checkUAgentHealth();
  */
 export async function checkUAgentHealth(): Promise<boolean> {
   try {
