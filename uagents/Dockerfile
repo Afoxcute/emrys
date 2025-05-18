@@ -20,8 +20,8 @@ ENV HOST=0.0.0.0
 EXPOSE $PORT
 
 # Health check to verify the application is running
-#HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-#  CMD curl -f http://localhost:$PORT/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:$PORT/health || exit 1
 
 # Start the agent
 CMD python agent.py 

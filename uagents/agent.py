@@ -111,6 +111,13 @@ class HealthResponse(Model):
     agent_name: str
 
 # REST API endpoints
+@agent.on_event("startup")
+async def startup():
+    agent.logger.info(f"Emrys Protocol Agent starting on {HOST}:{PORT}")
+    agent.logger.info(f"REST endpoints available at http://{HOST}:{PORT}/")
+    agent.logger.info(f"Health check endpoint: http://{HOST}:{PORT}/health")
+
+# Simple mechanism to add CORS headers to responses
 @agent.on_rest_post("/protocol/info", ProtocolInfoRequest, ProtocolInfoResponse)
 async def handle_protocol_info(ctx: Context, req: ProtocolInfoRequest) -> ProtocolInfoResponse:
     ctx.logger.info(f"REST API: Received request for protocol info: {req.protocolName}")
@@ -168,33 +175,39 @@ async def handle_health(ctx: Context) -> Dict[str, Any]:
         "agent_name": "emrys_technology_agent"
     }
 
-# Enable CORS for the REST endpoints
-@agent.middleware
-async def cors_middleware(request, handler):
-    # Handle preflight OPTIONS requests
-    if request.method == "OPTIONS":
-        # Create a new response with appropriate CORS headers
-        from aiohttp import web
-        response = web.Response(status=204)
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
-        return response
-    
-    # For all other requests, process normally and add CORS headers to response
-    response = await handler(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    return response
-
-# Handle startup event
-@agent.on_event("startup")
-async def startup():
-    agent.logger.info(f"Emrys Protocol Agent starting on {HOST}:{PORT}")
-    agent.logger.info(f"REST endpoints available at http://{HOST}:{PORT}/")
-    agent.logger.info(f"Health check endpoint: http://{HOST}:{PORT}/health")
-
 if __name__ == "__main__":
-    agent.run(host=HOST, port=PORT) 
+    # Import necessary aiohttp modules
+    from aiohttp import web
+
+    # Create a simple CORS middleware function
+    @web.middleware
+    async def cors_middleware(request, handler):
+        # Handle preflight OPTIONS requests
+        if request.method == "OPTIONS":
+            response = web.Response(status=204)
+            response.headers.update({
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Max-Age": "86400"  # 24 hours
+            })
+            return response
+        
+        # Process the request
+        response = await handler(request)
+        
+        # Add CORS headers to the response
+        response.headers.update({
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization"
+        })
+        
+        return response
+
+    # Create the aiohttp app
+    app = web.Application(middlewares=[cors_middleware])
+    
+    # Start the agent with our CORS-enabled app
+    # Note: agent.run() will register all the endpoints
+    agent.run(host=HOST, port=PORT, aiohttp_app=app) 
