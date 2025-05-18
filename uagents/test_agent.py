@@ -3,72 +3,93 @@ import json
 import sys
 import aiohttp
 
-# Default to localhost, but allow overriding from command line
-BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "http://emrys-production.up.railway.app:8000"
+# Replace with the actual URL where your agent is running
+BASE_URL = "http://localhost:8000"
 
 async def test_health_endpoint():
-    """Test the health endpoint."""
+    """Test the health endpoint of the agent"""
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{BASE_URL}/health") as response:
-            print(f"Health check status: {response.status}")
             if response.status == 200:
                 data = await response.json()
-                print(f"Health check response: {json.dumps(data, indent=2)}")
-                return True
-            return False
-
-async def test_protocols_list():
-    """Test the protocols list endpoint."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"{BASE_URL}/protocols/list") as response:
-            print(f"Protocols list status: {response.status}")
-            if response.status == 200:
-                data = await response.json()
-                print(f"Found {data.get('count', 0)} protocols")
-                print(f"Protocols: {json.dumps(data.get('protocols', {}), indent=2)}")
-                return True
-            return False
-
-async def test_protocol_info(protocol_name="solana"):
-    """Test the protocol info endpoint."""
-    async with aiohttp.ClientSession() as session:
-        payload = {"protocol_name": protocol_name}
-        async with session.post(
-            f"{BASE_URL}/protocol/info", 
-            json=payload
-        ) as response:
-            print(f"Protocol info status for '{protocol_name}': {response.status}")
-            if response.status == 200:
-                data = await response.json()
-                print(f"Protocol info: {json.dumps(data, indent=2)}")
+                print(f"Health check successful: {data}")
                 return True
             else:
-                error = await response.text()
-                print(f"Error: {error}")
+                print(f"Health check failed with status: {response.status}")
                 return False
 
+async def test_protocols_list():
+    """Test the protocols list endpoint of the agent"""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{BASE_URL}/protocols/list") as response:
+            if response.status == 200:
+                data = await response.json()
+                print(f"Protocols list: {json.dumps(data, indent=2)}")
+                return True
+            else:
+                print(f"Failed to get protocols list with status: {response.status}")
+                return False
+
+async def test_protocol_info(protocol_name="solana"):
+    """Test the protocol info endpoint of the agent"""
+    payload = {"protocolName": protocol_name}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{BASE_URL}/protocol/info", json=payload) as response:
+            if response.status == 200:
+                data = await response.json()
+                print(f"\nProtocol info for '{protocol_name}':")
+                print(json.dumps(data, indent=2))
+                return True
+            else:
+                print(f"Failed to get protocol info with status: {response.status}")
+                return False
+
+async def test_chat_faq():
+    """Test the chat FAQ endpoint of the agent"""
+    questions = [
+        "What is Emrys?",
+        "Which chains are supported?",
+        "Tell me about bridge fees",
+        "Hello there!",
+    ]
+    
+    async with aiohttp.ClientSession() as session:
+        for question in questions:
+            payload = {"question": question}
+            async with session.post(f"{BASE_URL}/chat/faq", json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    print(f"\nQuestion: '{question}'")
+                    print(f"Answer: '{data['answer']}'")
+                    if 'suggested_questions' in data and data['suggested_questions']:
+                        print(f"Suggested questions: {data['suggested_questions']}")
+                else:
+                    print(f"Failed to get chat response with status: {response.status}")
+                    return False
+    return True
+
 async def main():
-    """Run all tests."""
-    print(f"Testing agent at {BASE_URL}")
-    print("-" * 50)
+    """Run all tests"""
+    print("🧪 Testing Railway agent endpoints...")
     
+    # Test health endpoint
     health_ok = await test_health_endpoint()
-    print("-" * 50)
+    if not health_ok:
+        print("❌ Health check failed, skipping other tests")
+        return
     
-    if health_ok:
-        await test_protocols_list()
-        print("-" * 50)
-        
-        # Test a valid protocol
-        await test_protocol_info("solana")
-        print("-" * 50)
-        
-        # Test an invalid protocol
-        await test_protocol_info("nonexistent")
-    else:
-        print("Health check failed, skipping other tests")
+    # Test protocols list
+    await test_protocols_list()
     
-    print("Testing completed")
+    # Test protocol info
+    await test_protocol_info("bitcoin")
+    await test_protocol_info("ethereum")
+    await test_protocol_info("solana")
+    
+    # Test chat FAQ
+    await test_chat_faq()
+    
+    print("\n✅ All tests completed!")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

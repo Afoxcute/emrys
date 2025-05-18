@@ -15,7 +15,7 @@ type Message = {
   isUser: boolean;
 };
 
-// Standard FAQ data for basic questions when uAgent is unavailable
+// Standard FAQ data for basic questions (used as fallback if agent is not available)
 const faqData = [
   {
     question: 'What is Emrys?',
@@ -69,7 +69,9 @@ export default function FaqChat() {
     { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [suggestedQuestions] = useState(faqData.map((item) => item.question));
+  const [suggestedQuestions, setSuggestedQuestions] = useState(
+    faqData.map((item) => item.question),
+  );
   const [protocolNames, setProtocolNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uAgentAvailable, setUAgentAvailable] = useState(false);
@@ -140,28 +142,26 @@ export default function FaqChat() {
       return;
     }
 
-    // If uAgent is available, send the question directly to it
-    if (uAgentAvailable) {
-      try {
-        const answer = await sendChatQuestion(question);
-        addMessage(answer, false);
-        setIsLoading(false);
-        return;
-      } catch (error) {
-        logger.error('Error getting answer from uAgent:', error);
-        // Fall back to protocol info or basic keyword matching if chat fails
-        await tryProtocolInfo(question);
-      }
-    } else {
-      // If uAgent is unavailable, use basic keyword matching
-      handleGeneralQuestion(question);
-    }
-  };
+    try {
+      // Use uAgent chat API if available
+      if (uAgentAvailable) {
+        const response = await sendChatQuestion(question);
+        if (response && response.answer) {
+          addMessage(response.answer, false);
 
-  const tryProtocolInfo = async (question: string) => {
-    // If uAgent is available but chat endpoint failed, try protocol info
-    if (uAgentAvailable && protocolNames.length > 0) {
-      try {
+          // Update suggested questions if provided
+          if (response.suggested_questions && response.suggested_questions.length > 0) {
+            setSuggestedQuestions(response.suggested_questions);
+          }
+
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // If uAgent is unavailable or response failed, fall back to local processing
+      // First try to get protocol information if relevant
+      if (uAgentAvailable && protocolNames.length > 0) {
         // Extract potential protocol name from question
         const words = question.toLowerCase().split(/\s+/);
         const potentialProtocols = words.filter(
@@ -215,15 +215,12 @@ export default function FaqChat() {
             continue;
           }
         }
-
-        // If no specific protocol found, handle as a general question
-        handleGeneralQuestion(question);
-      } catch (error) {
-        logger.error('Error processing with uAgent:', error);
-        handleGeneralQuestion(question);
       }
-    } else {
-      // Fall back to basic keyword matching
+
+      // If we get here, use the local fallback
+      handleGeneralQuestion(question);
+    } catch (error) {
+      logger.error('Error processing question:', error);
       handleGeneralQuestion(question);
     }
   };

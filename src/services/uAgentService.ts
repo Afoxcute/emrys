@@ -20,24 +20,9 @@ export interface ProtocolsListResponse {
 
 export interface ChatResponse {
   timestamp: number;
-  question: string;
   answer: string;
+  suggested_questions?: string[];
   agent_address: string;
-}
-
-/**
- * Send a user question to the uAgent and get a response
- */
-export async function sendChatQuestion(question: string): Promise<string> {
-  try {
-    const response = await axios.post<ChatResponse>(`${UAGENT_BASE_URL}/chat/question`, {
-      question,
-    });
-    return response.data.answer;
-  } catch (error) {
-    logger.error('Error sending chat question:', error);
-    throw new Error('Failed to get answer from AI assistant');
-  }
 }
 
 /**
@@ -65,6 +50,19 @@ export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   } catch (error) {
     logger.error('Error fetching protocols list:', error);
     throw new Error('Failed to fetch protocols list');
+  }
+}
+
+/**
+ * Send a chat question to the uAgent and get a response
+ */
+export async function sendChatQuestion(question: string): Promise<ChatResponse> {
+  try {
+    const response = await axios.post<ChatResponse>(`${UAGENT_BASE_URL}/chat/faq`, { question });
+    return response.data;
+  } catch (error) {
+    logger.error('Error sending chat question:', error);
+    throw new Error('Failed to get chat response');
   }
 }
 
