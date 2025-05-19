@@ -11,7 +11,7 @@ from chat_proto import chat_proto, struct_output_client_proto
 from model import get_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse, BLOCKCHAIN_TECHNOLOGIES
 
 # Get environment variables for Railway deployment
-PORT = int(os.environ.get("PORT", 8000))
+PORT = int(os.environ.get("PORT", 8080))
 HOST = os.environ.get("HOST", "0.0.0.0")
 AGENT_SEED = os.environ.get("AGENT_SEED", "emrys_protocol_agent_seed_phrase")
 
