@@ -4,8 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
 
-// Get the base URL from environment variables
-const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'http://localhost:8000';
+// Get the base URL from environment variables but use the proxy route
+// Instead of direct API calls, we'll use the Next.js API proxy to avoid CORS issues
+const api = axios.create({
+  baseURL: '/api/uagent',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+});
 
 type Message = {
   id: number;
@@ -81,24 +88,27 @@ export default function FaqChat() {
   // Get protocol names when uAgent is available
   useEffect(() => {
     if (uAgentAvailable) {
-      // Using the REST endpoint directly
-      axios
-        .get(`${UAGENT_BASE_URL}/protocols/list`)
-        .then((response) => {
-          if (response.data && response.data.protocols) {
-            setProtocolNames(Object.keys(response.data.protocols));
-          }
-        })
-        .catch((error) => {
-          logger.error('Error fetching protocols list:', error);
-        });
+      fetchProtocolsList();
     }
   }, [uAgentAvailable]);
 
+  const fetchProtocolsList = async () => {
+    try {
+      // Using the Next.js API proxy route
+      const response = await api.get('/protocols/list');
+      if (response.data && response.data.protocols) {
+        setProtocolNames(Object.keys(response.data.protocols));
+      }
+    } catch (error) {
+      logger.error('Error fetching protocols list:', error);
+      setUAgentAvailable(false);
+    }
+  };
+
   const checkAgent = async () => {
     try {
-      // Using the REST endpoint directly
-      const response = await axios.get(`${UAGENT_BASE_URL}/health`);
+      // Using the Next.js API proxy route
+      const response = await api.get('/health');
       setUAgentAvailable(response.data.status === 'healthy');
     } catch (error) {
       logger.error('Error checking uAgent health:', error);
@@ -177,8 +187,8 @@ export default function FaqChat() {
 
         if (matchedProtocol) {
           try {
-            // Using the REST endpoint directly
-            const response = await axios.post(`${UAGENT_BASE_URL}/protocol/info`, {
+            // Using the Next.js API proxy route
+            const response = await api.post('/protocol/info', {
               protocolName: matchedProtocol,
             });
             addMessage(response.data.information, false);
@@ -192,8 +202,8 @@ export default function FaqChat() {
         // Then try each potential term
         for (const term of potentialProtocols) {
           try {
-            // Using the REST endpoint directly
-            const response = await axios.post(`${UAGENT_BASE_URL}/protocol/info`, {
+            // Using the Next.js API proxy route
+            const response = await api.post('/protocol/info', {
               protocolName: term,
             });
             addMessage(response.data.information, false);
@@ -253,6 +263,15 @@ export default function FaqChat() {
         'This chat assistant is powered by fetch.ai uAgents technology, which provides intelligent, context-aware interactions. It allows me to understand your questions and provide relevant information about Emrys.',
         false,
       );
+    } else if (
+      uAgentAvailable &&
+      !lowerQuestion.includes('error') &&
+      lowerQuestion.includes('cors')
+    ) {
+      addMessage(
+        "CORS (Cross-Origin Resource Sharing) is a security feature that restricts web applications from making requests to domains other than the one that served the application. We've configured our Next.js app with an API proxy to handle CORS properly for secure communications with the uAgent API.",
+        false,
+      );
     } else {
       // Try to find the most relevant FAQ
       const relevantFaqs = faqData.filter((item) => {
@@ -285,6 +304,19 @@ export default function FaqChat() {
     ]);
   };
 
+  // Handle offline mode when uAgent is not available
+  const offlineMode = () => {
+    if (uAgentAvailable === false) {
+      return (
+        <div className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-700">
+          <p>⚠️ AI Assistant is currently offline. Using basic FAQ mode only.</p>
+          <p className="mt-1">Some advanced features may not be available.</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="mx-auto mt-8 w-full max-w-2xl overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
       <div className="flex h-96 flex-col">
@@ -299,6 +331,7 @@ export default function FaqChat() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
+          {offlineMode()}
           <div className="space-y-4">
             {messages.map((message) => (
               <div

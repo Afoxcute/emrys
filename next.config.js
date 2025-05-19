@@ -71,7 +71,7 @@ const nextConfig = {
   webpack(config) {
     config.module.rules.push({
       test: /\.ya?ml$/,
-      use: 'yaml-loader',
+      use: 'js-yaml-loader',
     });
     return config;
   },
@@ -79,8 +79,29 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
-        headers: securityHeaders,
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
       },
     ];
   },
@@ -90,6 +111,26 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
+
+  // Add rewrites for API proxy to handle CORS
+  async rewrites() {
+    const uAgentUrl = process.env.NEXT_PUBLIC_UAGENT_URL || 'http://localhost:8000';
+    return [
+      {
+        source: '/api/uagent/:path*',
+        destination: `${uAgentUrl}/:path*`,
+      },
+    ];
+  },
+
+  // Configure SWC minification
+  swcMinify: true,
+
+  // Explicitly disable page bundling
+  experimental: {
+    externalDir: true,
+    newNextLinkBehavior: true,
+  },
 };
 
 const sentryOptions = {
