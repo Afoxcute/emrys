@@ -241,6 +241,34 @@ DEFI_PROTOCOLS = {
             "https://github.com/solana-labs/solana-program-library"
         ]
     },
+    "soon_svm": {
+        "name": "SOON SVM (Enhanced Solana VM)",
+        "category": "Custom VM Fork",
+        "launched": "2022",
+        "blockchain": "Emrys",
+        "ecosystem": "Cross-Ecosystem",
+        "description": "SOON SVM is Emrys' custom fork of the Solana Virtual Machine, optimized specifically for cross-chain operations. It maintains the parallel execution advantages of the original SVM while adding specialized functionality for token bridging and cross-chain communication. This proprietary implementation enables high-throughput token transfers across heterogeneous blockchain networks.",
+        "key_features": [
+            "High-throughput transaction processing (thousands of TPS)",
+            "Parallel transaction execution for faster bridging operations",
+            "Low-latency confirmations reducing waiting times",
+            "Robust smart contract execution for token locking and minting",
+            "Cross-chain optimizations for efficient token transfers",
+            "Specialized cross-chain instruction set"
+        ],
+        "technical_aspects": [
+            "Proprietary fork of the original Solana VM",
+            "Enhanced security guarantees while maintaining speed",
+            "Specialized for cross-chain operations",
+            "Backward compatible with standard SVM programs",
+            "Extended account model for interoperability",
+            "Custom validations for cross-chain token transfers"
+        ],
+        "learning_resources": [
+            "https://github.com/solana-labs/solana (Base for understanding)",
+            "Emrys documentation on SOON SVM implementation"
+        ]
+    },
     "osmosis": {
         "name": "Osmosis",
         "category": "Decentralized Exchange (DEX)",
@@ -332,16 +360,16 @@ DEFI_PROTOCOLS = {
         "name": "Inter-Blockchain Communication (IBC)",
         "category": "Cross-Chain Protocol",
         "launched": "2021",
-        "blockchain": "Cosmos Ecosystem",
-        "ecosystem": "Cosmos",
-        "description": "IBC (Inter-Blockchain Communication) is a protocol for secure communication between heterogeneous blockchains, primarily used in the Cosmos ecosystem but extendable to other blockchains. It enables cross-chain token transfers, interchain accounts, and cross-chain smart contract calls, making it the backbone of interoperability in Cosmos.",
+        "blockchain": "Cosmos Ecosystem, Emrys",
+        "ecosystem": "Cosmos, Cross-Ecosystem",
+        "description": "IBC (Inter-Blockchain Communication) is a protocol for secure communication between heterogeneous blockchains. Emrys implements IBC to enable seamless, secure token transfers between EVM chains (Ethereum, Avalanche, Polygon, BSC) and Solana, with plans for expansion to more ecosystems. This implementation provides chain-agnostic messaging with trustless operation and protocol-level security.",
         "key_features": [
-            "Trustless cross-chain communication",
-            "Transfer of tokens between chains",
-            "Interchain accounts (ICAs)",
-            "Cross-chain smart contract calls",
-            "Light client verification",
-            "Packet relay system"
+            "Chain-agnostic messaging for standardized communication",
+            "Light client verification for cryptographic validation",
+            "Trustless operation without central authorities",
+            "Protocol-level security with cryptographic verification",
+            "Permissionless connection establishment",
+            "Cross-chain token transfers and messaging"
         ],
         "technical_aspects": [
             "Light client verification for security",
@@ -349,12 +377,14 @@ DEFI_PROTOCOLS = {
             "Packet commitment and verification",
             "Ordered and unordered channels",
             "Timeout handling for liveness",
-            "Relayer infrastructure for message passing"
+            "Relayer infrastructure for message passing",
+            "Custom adaptation for EVM-to-Solana compatibility"
         ],
         "learning_resources": [
             "https://ibcprotocol.org/",
             "https://tutorials.cosmos.network/academy/3-ibc/",
-            "https://github.com/cosmos/ibc"
+            "https://github.com/cosmos/ibc",
+            "Emrys documentation on IBC implementation"
         ]
     },
     "penumbra": {
@@ -442,6 +472,93 @@ DEFI_PROTOCOLS = {
             "https://wormhole.com/",
             "https://docs.wormhole.com/",
             "https://github.com/wormhole-foundation"
+        ]
+    },
+    "walrus": {
+        "name": "Walrus Decentralized Storage",
+        "category": "Storage Solution",
+        "launched": "2022",
+        "blockchain": "Multi-chain",
+        "ecosystem": "Cross-Ecosystem",
+        "description": "Walrus is a next-generation decentralized storage solution integrated into the Emrys platform. It ensures that all cross-chain transactions are permanently and securely stored, with data fragments distributed across multiple nodes for redundancy. This storage layer enhances transparency and auditability by giving users access to their transaction history regardless of which blockchain they're using.",
+        "key_features": [
+            "Immutable transaction records for all cross-chain operations",
+            "Distributed data fragments across multiple nodes",
+            "Rapid data retrieval with low-latency access from any chain",
+            "Censorship resistance with no single point of failure",
+            "Data encryption before network storage",
+            "Transaction history accessibility"
+        ],
+        "technical_aspects": [
+            "Erasure coding for data redundancy",
+            "IPLD-compatible data format",
+            "Merkle-based verification",
+            "Incentivized storage providers",
+            "On-chain anchoring of data commitments",
+            "Cross-chain indexing for efficient retrieval",
+            "End-to-end encryption protocols"
+        ],
+        "learning_resources": [
+            "Emrys documentation on Walrus protocol",
+            "GitHub repository for Walrus components"
+        ]
+    },
+    "zpl": {
+        "name": "ZPL UTXO Bridge",
+        "category": "Cross-Chain Bridge Protocol",
+        "launched": "2022",
+        "blockchain": "Bitcoin, Dogecoin, Litecoin, Solana",
+        "ecosystem": "Cross-Ecosystem",
+        "description": "The ZPL UTXO Bridge is a sophisticated cross-chain solution that enables secure and efficient movement of assets between UTXO-based blockchains (like Bitcoin, Dogecoin, and Litecoin) and Solana's account-based system. It implements a two-way peg mechanism allowing users to deposit, withdraw, and manage assets across fundamentally different blockchain architectures.",
+        "key_features": [
+            "Cross-Chain Asset Movement: Deposit BTC/DOGE/LTC and receive wrapped assets (zBTC/zDOGE/zLTC) on Solana",
+            "Two-Way Peg: Fully redeemable assets with bidirectional movement",
+            "Hot/Cold Reserve System: Advanced security architecture for asset management",
+            "Multi-Wallet Support: Integrates with various Bitcoin wallets",
+            "Multi-Cryptocurrency Support: Works with Bitcoin, Dogecoin, and Litecoin",
+            "Portfolio Management: Track and manage cross-chain assets",
+            "Transaction History: View and track all cross-chain operations"
+        ],
+        "technical_aspects": [
+            "UTXO Selection: Intelligent selection of UTXOs for optimal transaction fees",
+            "Dust Management: Proper handling of dust amounts to prevent stuck funds",
+            "Fee Estimation: Dynamic fee calculation based on network conditions",
+            "P2TR Support: Native support for Pay-to-Taproot addresses",
+            "Transaction Construction: Building, signing, and broadcasting transactions",
+            "Hot Reserve: For regular deposit/withdrawal operations with time-locked scripts",
+            "Cold Reserve: For secure long-term asset storage with recovery parameters",
+            "Guardian System: Monitors and secures cross-chain operations",
+            "Time-Locked Scripts: Provides security for user funds with specified unlock heights",
+            "IBC Module: Handles inter-blockchain communication with light clients"
+        ],
+        "client_functions": [
+            "Reserve Management: Managing hot and cold reserves for different cryptocurrencies",
+            "Account Services: Creating and managing user accounts and positions",
+            "Instruction Construction: Building Solana program instructions for all operations",
+            "Transaction Signing: Handling transaction signing and submission",
+            "Position Tracking: Monitoring user positions and balances"
+        ],
+        "usage_flows": {
+            "deposit": [
+                "Connect your Bitcoin and Solana wallets",
+                "Select cryptocurrency type (BTC, DOGE, or LTC)",
+                "Enter the amount to deposit",
+                "Confirm the transaction in your wallet",
+                "Once confirmed on the source chain, funds will be credited as wrapped tokens on Solana"
+            ],
+            "withdrawal": [
+                "Connect your wallets",
+                "Select cryptocurrency type",
+                "Enter the amount to withdraw",
+                "Choose a destination address",
+                "Confirm the transaction with your Solana wallet",
+                "Monitor the withdrawal status in the transaction history"
+            ]
+        },
+        "learning_resources": [
+            "Emrys documentation on ZPL UTXO Bridge",
+            "https://docs.bitcoin.org/",
+            "https://docs.solana.com/"
         ]
     }
 }

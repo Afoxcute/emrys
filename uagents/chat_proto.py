@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import Any
+import time
 
 from uagents import Context, Model, Protocol
 
@@ -16,13 +17,37 @@ from uagents_core.contrib.protocols.chat import (
 
 from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest
 
-#Replace the AI Agent Address with anyone of the following LLMs as they support StructuredOutput required for the processing of this agent. 
+# OpenAI LLM Agent address for structured output
+OPENAI_AGENT_ADDRESS = 'agent1q0h70caed8ax769shpemapzkyk65uscw4xwk6dc4t3emvp5jdcvqs9xs32y'
 
-AI_AGENT_ADDRESS = 'agent1q0h70caed8ax769shpemapzkyk65uscw4xwk6dc4t3emvp5jdcvqs9xs32y'
+if not OPENAI_AGENT_ADDRESS:
+    raise ValueError("OPENAI_AGENT_ADDRESS not set")
 
-if not AI_AGENT_ADDRESS:
-    raise ValueError("AI_AGENT_ADDRESS not set")
+# Configuration constants
+RESPONSE_TIMEOUT_SECONDS = 15  # Time to wait for OpenAI response before providing fallback
 
+# Rate limiting implementation
+class RateLimiter:
+    def __init__(self, requests_per_hour=6):
+        self.requests_per_hour = requests_per_hour
+        self.request_times = []
+        
+    async def check_rate_limit(self, ctx: Context) -> bool:
+        """Check if we're within rate limits (6 requests per hour)"""
+        current_time = time.time()
+        # Remove requests older than 1 hour
+        self.request_times = [t for t in self.request_times if current_time - t < 3600]
+        
+        if len(self.request_times) >= self.requests_per_hour:
+            ctx.logger.warning(f"Rate limit exceeded: {len(self.request_times)} requests in the last hour")
+            return False
+        
+        # Add current request time
+        self.request_times.append(current_time)
+        return True
+
+# Initialize rate limiter
+rate_limiter = RateLimiter()
 
 def create_text_chat(text: str, end_session: bool = True) -> ChatMessage:
     content = [TextContent(type="text", text=text)]
@@ -65,17 +90,53 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             await ctx.send(
                 sender,
                 create_text_chat(
-                    "Welcome to the Emrys DeFi Protocol Assistant! I can provide educational information about protocols in the Solana ecosystem (Solend, Orca, Raydium, Serum, Marinade, Jito, Jupiter), SVM technologies, Cosmos IBC protocols (Osmosis, Astroport, Mars, IBC, Penumbra), and cross-ecosystem bridges like Wormhole and Pyth. What would you like to learn about?",
+                    "Welcome to the Emrys Bridge Technology Assistant! I can provide comprehensive information about our cross-chain technologies including: SOON SVM (our enhanced Solana VM for high-throughput bridging), IBC protocol implementation, Walrus decentralized storage, ZPL UTXO Bridge (connecting Bitcoin, Dogecoin, and Litecoin to Solana), and various DeFi protocols in the Solana and Cosmos ecosystems. What would you like to learn about?",
                     end_session=False
                 )
             )
         elif isinstance(item, TextContent):
             ctx.logger.info(f"Got a message from {sender}: {item.text}")
+            
+            # Check rate limits before proceeding
+            if not await rate_limiter.check_rate_limit(ctx):
+                await ctx.send(
+                    sender,
+                    create_text_chat(
+                        "Sorry, we've reached our query limit (6 requests per hour). Please try again later."
+                    )
+                )
+                continue
+                
             ctx.storage.set(str(ctx.session), sender)
+            ctx.storage.set(f"{str(ctx.session)}_query", item.text)
+            
+            # Record the time we sent the request to OpenAI
+            request_time = datetime.utcnow()
+            ctx.storage.set(f"{str(ctx.session)}_request_time", request_time.isoformat())
+            
+            # Schedule a fallback response in case OpenAI doesn't respond in time
+            ctx.storage.set(f"{str(ctx.session)}_fallback_scheduled", "true")
+            
+            # Send to OpenAI LLM for processing with structured output
             await ctx.send(
-                AI_AGENT_ADDRESS,
+                OPENAI_AGENT_ADDRESS,
                 StructuredOutputPrompt(
-                    prompt=item.text, output_schema=DeFiProtocolRequest.schema()
+                    prompt=f"""Analyze this user query about blockchain technology: '{item.text}'
+                    
+Extract the specific DeFi protocol or blockchain technology the user is asking about. I need to return information about a single technology or protocol.
+
+If the query mentions multiple technologies, select the primary one that seems to be the main focus.
+If the query is vague or doesn't mention a specific technology, identify the most relevant technology based on context.
+
+Available technologies include:
+- Core technologies: SOON SVM, IBC, Walrus Storage, ZPL UTXO Bridge
+- Solana protocols: Solend, Orca, Raydium, Serum, Marinade, Jito, Jupiter, Mango, Drift
+- Cosmos protocols: Osmosis, Astroport, Mars, Neutron
+- Cross-ecosystem: Wormhole, Pyth, LayerZero
+
+The response should be formatted to match the DeFiProtocolRequest schema with a protocol_name field containing just the name of the protocol or technology.
+""",
+                    output_schema=DeFiProtocolRequest.schema()
                 ),
             )
         else:
@@ -100,33 +161,143 @@ async def handle_structured_output_response(
         )
         return
 
-    if "<UNKNOWN>" in str(msg.output):
+    # Cancel the fallback response since we got a response from OpenAI
+    ctx.storage.set(f"{str(ctx.session)}_fallback_scheduled", "false")
+
+    original_query = ctx.storage.get(f"{str(ctx.session)}_query") or "unknown query"
+    ctx.logger.info(f"Processing structured output for query: {original_query}")
+
+    # Store response for analytics and debugging
+    ctx.storage.set(f"{str(ctx.session)}_openai_response", str(msg.output))
+
+    if "<UNKNOWN>" in str(msg.output) or "error" in str(msg.output).lower():
+        error_message = "I couldn't identify a specific protocol or technology in your question"
+        
+        if "error" in str(msg.output).lower():
+            ctx.logger.error(f"OpenAI error: {str(msg.output)}")
+            error_message = "Sorry, the AI service is currently experiencing issues. Please try again later."
+        
         await ctx.send(
             session_sender,
             create_text_chat(
-                "Sorry, I couldn't understand which protocol you're asking about. You can ask about Solana protocols (like Solend, Orca, Raydium, Serum, Marinade, Jito, Jupiter), SVM technology, Cosmos protocols (like Osmosis, Astroport, Mars, IBC, Penumbra), or cross-ecosystem bridges (like Wormhole and Pyth)."
+                f"{error_message}. You can ask about our core bridge technologies (SOON SVM, IBC, Walrus, ZPL UTXO Bridge), Solana protocols (Solend, Orca, Raydium, etc.), Cosmos protocols (Osmosis, Astroport, etc.), or cross-ecosystem bridges (Wormhole, Pyth)."
             ),
         )
         return
 
-    prompt = DeFiProtocolRequest.parse_obj(msg.output)
-
     try:
-        protocol_info = await get_defi_protocol_info(prompt.protocol_name)
+        prompt = DeFiProtocolRequest.parse_obj(msg.output)
+        extracted_name = prompt.protocol_name.strip()
+        ctx.logger.info(f"Extracted protocol name: {extracted_name}")
+        
+        # Store the extracted protocol name for analytics
+        ctx.storage.set(f"{str(ctx.session)}_extracted_protocol", extracted_name)
+        
+        if not extracted_name:
+            raise ValueError("Empty protocol name extracted")
+            
+        protocol_info = await get_defi_protocol_info(extracted_name)
     except Exception as err:
-        ctx.logger.error(err)
+        ctx.logger.error(f"Error processing protocol info: {err}")
+        
+        # Check if it's a parsing error or a protocol info error
+        error_type = "parsing error" if "parse_obj" in str(err) else "protocol info error"
+        ctx.logger.error(f"Type of error: {error_type}")
+        
         await ctx.send(
             session_sender,
             create_text_chat(
-                "Sorry, I couldn't process your DeFi protocol information request. Please try again later."
+                f"Sorry, I encountered an error while processing information about '{prompt.protocol_name if 'prompt' in locals() else 'the requested technology'}'. Please try a different query or be more specific."
             ),
         )
         return
 
     if "not found" in protocol_info:
-        await ctx.send(session_sender, create_text_chat(protocol_info))
+        # Try to provide a helpful response based on the original query
+        context_response = f"I couldn't find specific information about '{prompt.protocol_name}'. {protocol_info}"
+        await ctx.send(session_sender, create_text_chat(context_response))
         return
 
+    # Store successful result for analytics
+    ctx.storage.set(f"{str(ctx.session)}_success", "true")
+    
     chat_message = create_text_chat(protocol_info)
-
     await ctx.send(session_sender, chat_message)
+
+
+# Periodic task to check for timeout and send fallback responses
+@chat_proto.on_interval(period=5.0)  # Check every 5 seconds
+async def check_for_timeouts(ctx: Context):
+    """Check for requests that haven't received a response within the timeout period"""
+    now = datetime.utcnow()
+    
+    try:
+        # Get all active sessions
+        for key in ctx.storage.keys():
+            if not key.endswith("_request_time"):
+                continue
+                
+            session_id = key.replace("_request_time", "")
+            fallback_scheduled = ctx.storage.get(f"{session_id}_fallback_scheduled")
+            
+            if fallback_scheduled != "true":
+                continue  # Skip if fallback not scheduled or already processed
+                
+            # Get the timestamp of the request
+            request_time_str = ctx.storage.get(key)
+            if not request_time_str:
+                continue
+                
+            request_time = datetime.fromisoformat(request_time_str)
+            time_elapsed = now - request_time
+            
+            # If we've waited longer than the timeout, send a fallback response
+            if time_elapsed > timedelta(seconds=RESPONSE_TIMEOUT_SECONDS):
+                ctx.logger.warning(f"Request timeout for session {session_id}. Sending fallback response.")
+                
+                # Get the session sender and original query
+                session_sender = ctx.storage.get(session_id)
+                original_query = ctx.storage.get(f"{session_id}_query") or "unknown query"
+                
+                if session_sender:
+                    # Mark as processed
+                    ctx.storage.set(f"{session_id}_fallback_scheduled", "false")
+                    ctx.storage.set(f"{session_id}_fallback_sent", "true")
+                    
+                    # Try to extract potential keywords from the query
+                    keywords = extract_potential_keywords(original_query)
+                    
+                    if keywords:
+                        fallback = f"I'm currently having trouble with my AI service. Based on your query about '{keywords}', you might want to check our documentation or try asking about specific protocols like Solend, Orca, or our core technologies like SOON SVM or Walrus Storage."
+                    else:
+                        fallback = "I'm currently having trouble with my AI service. Please try again later or ask about a specific protocol or technology by name."
+                        
+                    await ctx.send(
+                        session_sender,
+                        create_text_chat(fallback)
+                    )
+    except Exception as e:
+        ctx.logger.error(f"Error in timeout checker: {e}")
+
+
+def extract_potential_keywords(query: str) -> str:
+    """Extract potential keywords from a query to provide a more helpful fallback response"""
+    # List of known important keywords to look for
+    important_terms = [
+        "SOON", "SVM", "IBC", "Walrus", "Storage", "ZPL", "UTXO", "Bridge",
+        "Solana", "Cosmos", "Bitcoin", "Ethereum", "Dogecoin", "Litecoin",
+        "Solend", "Orca", "Raydium", "Serum", "Marinade", "Jito", "Jupiter", 
+        "Osmosis", "Astroport", "Wormhole", "Pyth"
+    ]
+    
+    # Simple keyword extraction
+    lowercase_query = query.lower()
+    found_terms = []
+    
+    for term in important_terms:
+        if term.lower() in lowercase_query:
+            found_terms.append(term)
+    
+    if found_terms:
+        return ", ".join(found_terms)
+    return ""

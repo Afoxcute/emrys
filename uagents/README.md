@@ -112,21 +112,48 @@ curl http://localhost:8000/protocols/list
 curl -d '{"protocol_name": "solana"}' -H "Content-Type: application/json" -X POST http://localhost:8000/protocol/info
 ```
 
-# Emrys Solana & Cosmos DeFi Protocol Agent
+# Emrys - Cross-Chain Bridge and DeFi Platform
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 
-This agent provides educational information about DeFi protocols focused on the Solana ecosystem, SVM technologies, and Cosmos IBC interoperability. It uses fetch.ai uAgents technology to handle natural language queries and respond with structured information about these specialized blockchain ecosystems.
+This agent provides educational information about DeFi protocols and technologies within the Emrys ecosystem, focusing on the Solana ecosystem, SVM technologies, Cosmos IBC interoperability, and proprietary Emrys technologies. It uses fetch.ai uAgents technology to deliver comprehensive information about these specialized blockchain systems.
 
-## Features
+## Core Technologies
 
-- Natural language interface using fetch.ai uAgents
-- Comprehensive information on Solana and Cosmos DeFi protocols
-- Detailed technical information about SVM (Solana Virtual Machine)
-- In-depth explanations of IBC (Inter-Blockchain Communication) technology
-- Integration with AI language models for query processing
-- Modular design for easy extension with additional protocols
-- Health monitoring system for reliability
+Emrys leverages several cutting-edge technologies to provide a seamless cross-chain experience:
+
+### SOON SVM (Solana Virtual Machine)
+
+A custom fork of the Solana Virtual Machine optimized for:
+- High-throughput transaction processing (thousands of TPS)
+- Parallel transaction execution for faster bridging operations
+- Low-latency confirmations for reduced waiting times
+- Robust smart contract execution for token locking and minting
+
+### IBC (Inter-Blockchain Communication)
+
+Backbone of Emrys' cross-chain functionality:
+- Chain-agnostic messaging between heterogeneous blockchain networks
+- Light client verification for cryptographic validation
+- Trustless operation without central authorities
+- Protocol-level security with cryptographic verification
+
+### Walrus Decentralized Storage
+
+Next-generation storage solution for:
+- Immutable transaction records for all cross-chain operations
+- Distributed data fragments across multiple nodes
+- Rapid data retrieval from any chain
+- Censorship resistance with no single point of failure
+- Data encryption for privacy and security
+
+### ZPL UTXO Bridge
+
+Sophisticated cross-chain solution for:
+- Connecting UTXO chains (Bitcoin, Dogecoin, Litecoin) with Solana
+- Two-way peg mechanism for fully redeemable assets
+- Hot/Cold reserve system for security
+- Multi-cryptocurrency support with wrapped tokens
 
 ## Supported DeFi Protocols
 
@@ -152,6 +179,38 @@ The agent provides information across three main ecosystems:
 ### Cross-Ecosystem
 - **Pyth Network**: Oracle with Solana, EVM, and Cosmos support
 - **Wormhole**: Cross-chain messaging between Solana, EVM chains, and Cosmos
+- **ZPL UTXO Bridge**: Bridge between Bitcoin-like chains and Solana
+
+## Bridge Implementation
+
+### Mainnet Bridge
+
+The mainnet bridge supports:
+- Cross-chain transfers of native tokens and popular standards
+- Token wrapping and unwrapping
+- Fee optimization
+- Relayer network for automated completions
+- Gas estimation and fee transparency
+
+Implementation leverages:
+- SOON SVM for execution
+- IBC for secure message passing
+- Walrus for transaction record storage
+
+### Testnet Bridge
+
+The testnet implementation provides a safe environment for users to:
+- Test native token bridging from EVM chains to Solana
+- Experience the full bridging workflow without risking real assets
+- Understand fee structures and timing expectations
+
+### ZPL UTXO Bridge
+
+The bridge enables secure transfer of assets between UTXO-based blockchains and Solana:
+- Deposit BTC/DOGE/LTC and receive wrapped assets on Solana
+- Two-way peg with fully redeemable assets
+- Advanced security with hot/cold reserve systems
+- Transaction history tracking via Walrus storage
 
 ## Installation and Setup
 
@@ -182,28 +241,42 @@ python agent.py
 
 ## Sample Interaction
 
-User: "Tell me about Solend"
+User: "Tell me about SOON SVM"
 
-Agent: *Returns detailed information about Solend, including how it utilizes SVM for lending and borrowing on Solana.*
+Agent: *Returns detailed information about Emrys' custom SVM fork optimized for cross-chain operations, including its features and technical aspects.*
 
-User: "How does Osmosis use IBC?"
+User: "How does the ZPL UTXO Bridge work?"
 
-Agent: *Returns information about Osmosis's IBC implementation, cross-chain liquidity, and interoperability with other Cosmos chains.*
+Agent: *Returns information about the ZPL UTXO Bridge, including its two-way peg mechanism, security model, and usage flows.*
 
 ## Technical Architecture
 
 The agent consists of three main components:
 
-1. **DeFi Protocol Module**: Contains the database of Solana and Cosmos protocols, with special attention to SVM and IBC integration details.
+1. **DeFi Protocol Module**: Contains the database of protocols and technologies, with detailed information about SOON SVM, IBC, Walrus, and the ZPL UTXO Bridge.
 
 2. **Chat Protocol**: Handles the natural language communication with users and integrates with LLMs.
 
-3. **Agent Core**: Manages the protocols, requests, rate limiting, and performs health checks across both ecosystems.
+3. **Agent Core**: Manages the protocols, requests, rate limiting, and performs health checks across all technologies.
+
+## Security Features
+
+The information provided includes details on Emrys security features:
+- Chain connection monitoring
+- Transaction verification
+- OFAC compliance checks
+- Multi-stage approval process
+- Audit trail via Walrus storage
+- Hot/Cold reserve systems for UTXO bridges
 
 ## Extending the Agent
 
-To add support for additional protocols in the Solana or Cosmos ecosystems, simply extend the `DEFI_PROTOCOLS` dictionary in `defi_protocol.py` with new entries following the same structure as existing protocols.
+To add support for additional protocols or technologies, simply extend the `DEFI_PROTOCOLS` dictionary in `defi_protocol.py` with new entries following the same structure as existing protocols.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+***DISCLAIMER:*** *Emrys uses SVM & IBC & WALRUS for secure transactions & speed. All transactions are processed using our proprietary implementation of SVM (Solana Virtual Machine) and IBC (Inter-Blockchain Communication) protocols, with data secured through Walrus decentralized storage.* 
