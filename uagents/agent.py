@@ -177,7 +177,9 @@ async def handle_health(ctx: Context) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Import necessary aiohttp modules
+    import os
     from aiohttp import web
+    import asyncio
 
     # Create a simple CORS middleware function
     @web.middleware
@@ -205,12 +207,8 @@ if __name__ == "__main__":
         
         return response
 
-    # Create the aiohttp app
+    # Create the aiohttp app with the CORS middleware
     app = web.Application(middlewares=[cors_middleware])
     
-    # Use web.run_app directly instead of agent.run with host and port
-    # First register the agent's routes to the app
-    agent.run(aiohttp_app=app)
-    
-    # Instead of letting the agent run the app, run it ourselves
-    web.run_app(app, host=HOST, port=PORT) 
+    # Start the agent with our CORS-enabled app
+    agent.run(aiohttp_app=app) 
