@@ -14,7 +14,7 @@ from uagents_core.contrib.protocols.chat import (
     chat_protocol_spec,
 )
 
-from model import get_protocol_info, DeFiProtocolRequest
+from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest
 
 #Replace the AI Agent Address with anyone of the following LLMs as they support StructuredOutput required for the processing of this agent. 
 
@@ -65,7 +65,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             await ctx.send(
                 sender,
                 create_text_chat(
-                    "Welcome to the Emrys Blockchain Technology Assistant! I can provide educational information about technologies used in the Emrys ecosystem: Solana, SVM, Soon SVM, Walrus, UTXO model, IBC protocol, ZPL UTXO Bridge, WalletConnect Integration, and Mainnet Deployment. What would you like to learn about?",
+                    "Welcome to the Emrys DeFi Protocol Assistant! I can provide educational information about protocols in the Solana ecosystem (Solend, Orca, Raydium, Serum, Marinade, Jito, Jupiter), SVM technologies, Cosmos IBC protocols (Osmosis, Astroport, Mars, IBC, Penumbra), and cross-ecosystem bridges like Wormhole and Pyth. What would you like to learn about?",
                     end_session=False
                 )
             )
@@ -104,7 +104,7 @@ async def handle_structured_output_response(
         await ctx.send(
             session_sender,
             create_text_chat(
-                "Sorry, I couldn't understand which technology you're asking about. Please try asking about one of these: Solana, SVM, Soon SVM, Walrus, UTXO, IBC, ZPL UTXO Bridge, WalletConnect Integration, or Mainnet Deployment."
+                "Sorry, I couldn't understand which protocol you're asking about. You can ask about Solana protocols (like Solend, Orca, Raydium, Serum, Marinade, Jito, Jupiter), SVM technology, Cosmos protocols (like Osmosis, Astroport, Mars, IBC, Penumbra), or cross-ecosystem bridges (like Wormhole and Pyth)."
             ),
         )
         return
@@ -112,13 +112,13 @@ async def handle_structured_output_response(
     prompt = DeFiProtocolRequest.parse_obj(msg.output)
 
     try:
-        protocol_info = await get_protocol_info(prompt.protocol_name)
+        protocol_info = await get_defi_protocol_info(prompt.protocol_name)
     except Exception as err:
         ctx.logger.error(err)
         await ctx.send(
             session_sender,
             create_text_chat(
-                "Sorry, I couldn't process your technology information request. Please try again later."
+                "Sorry, I couldn't process your DeFi protocol information request. Please try again later."
             ),
         )
         return

@@ -6,13 +6,13 @@ from uagents.experimental.quota import QuotaProtocol, RateLimit
 from uagents_core.models import ErrorMessage
 
 from chat_proto import chat_proto, struct_output_client_proto
-from model import get_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse
+from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse
 
 agent = Agent()
 
 proto = QuotaProtocol(
     storage_reference=agent.storage,
-    name="Emrys-Technology-Education-Protocol",
+    name="Emrys-Solana-Cosmos-DeFi-Protocol-Education",
     version="0.1.0",
     default_rate_limit=RateLimit(window_size_minutes=60, max_requests=30),
 )
@@ -21,11 +21,11 @@ proto = QuotaProtocol(
     DeFiProtocolRequest, replies={DeFiProtocolResponse, ErrorMessage}
 )
 async def handle_request(ctx: Context, sender: str, msg: DeFiProtocolRequest):
-    ctx.logger.info(f"Received technology info request for {msg.protocol_name}")
+    ctx.logger.info(f"Received DeFi protocol info request for {msg.protocol_name}")
     try:
-        results = await get_protocol_info(msg.protocol_name)
+        results = await get_defi_protocol_info(msg.protocol_name)
         ctx.logger.info(f'Retrieved information for {msg.protocol_name}')
-        ctx.logger.info("Successfully fetched technology information")
+        ctx.logger.info("Successfully fetched DeFi protocol information")
         await ctx.send(sender, DeFiProtocolResponse(results=results))
     except Exception as err:
         ctx.logger.error(err)
@@ -37,12 +37,15 @@ agent.include(proto, publish_manifest=True)
 def agent_is_healthy() -> bool:
     """
     Implement the actual health check logic here.
-    Check if the agent can retrieve technology information.
+    Check if the agent can retrieve Solana and Cosmos protocol information.
     """
     try:
         import asyncio
-        asyncio.run(get_protocol_info("solana"))
-        return True
+        # Test both a Solana protocol and a Cosmos protocol
+        solana_result = asyncio.run(get_defi_protocol_info("solend"))
+        cosmos_result = asyncio.run(get_defi_protocol_info("osmosis"))
+        svm_result = asyncio.run(get_defi_protocol_info("svm"))
+        return "Solend" in solana_result and "Osmosis" in cosmos_result and "SVM" in svm_result
     except Exception:
         return False
 
@@ -70,7 +73,7 @@ async def handle_health_check(ctx: Context, sender: str, msg: HealthCheck):
     except Exception as err:
         ctx.logger.error(err)
     finally:
-        await ctx.send(sender, AgentHealth(agent_name="emrys_technology_agent", status=status))
+        await ctx.send(sender, AgentHealth(agent_name="solana_cosmos_defi_agent", status=status))
 
 agent.include(health_protocol, publish_manifest=True)
 agent.include(chat_proto, publish_manifest=True)
