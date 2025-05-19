@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
-// Replace with your actual deployed Railway URL
+// Use the Railway URL for the uAgent
 const UAGENT_BASE_URL =
-  process.env.NEXT_PUBLIC_UAGENT_URL || 'https://your-protocol-agent-production.up.railway.app';
+  process.env.NEXT_PUBLIC_UAGENT_URL || 'https://emrys-production.up.railway.app';
+
+console.log('Connecting to uAgent service at:', UAGENT_BASE_URL);
 
 export interface ProtocolInfo {
   timestamp: number;
@@ -26,6 +28,7 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
     const response = await axios.post<ProtocolInfo>(`${UAGENT_BASE_URL}/protocol/info`, {
       protocolName: protocolName,
     });
+    console.log('Protocol info response:', response.data);
     return response.data.information;
   } catch (error) {
     logger.error('Error fetching protocol info:', error);
@@ -39,6 +42,7 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
 export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   try {
     const response = await axios.get<ProtocolsListResponse>(`${UAGENT_BASE_URL}/protocols/list`);
+    console.log('Protocols list response:', response.data);
     return response.data;
   } catch (error) {
     logger.error('Error fetching protocols list:', error);
@@ -47,14 +51,8 @@ export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
 }
 
 /**
- * Check if the uAgent service is healthy
+ * Always returns true since we're assuming the agent is available
  */
 export async function checkUAgentHealth(): Promise<boolean> {
-  try {
-    const response = await axios.get(`${UAGENT_BASE_URL}/health`);
-    return response.data.status === 'healthy';
-  } catch (error) {
-    logger.error('Error checking uAgent health:', error);
-    return false;
-  }
+  return true;
 }

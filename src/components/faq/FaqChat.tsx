@@ -1,10 +1,6 @@
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { useEffect, useRef, useState } from 'react';
-import {
-  checkUAgentHealth,
-  fetchProtocolInfo,
-  fetchProtocolsList,
-} from '../../services/uAgentService';
+import { fetchProtocolInfo, fetchProtocolsList } from '../../services/uAgentService';
 import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
 
@@ -71,38 +67,20 @@ export default function FaqChat() {
   const [suggestedQuestions] = useState(faqData.map((item) => item.question));
   const [protocolNames, setProtocolNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [uAgentAvailable, setUAgentAvailable] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Check if uAgent is available
+  // Load protocol names on component mount
   useEffect(() => {
-    checkAgent();
+    fetchProtocolsList()
+      .then((data) => {
+        if (data && data.protocols) {
+          setProtocolNames(Object.keys(data.protocols));
+        }
+      })
+      .catch((error) => {
+        logger.error('Error fetching protocols list:', error);
+      });
   }, []);
-
-  // Get protocol names when uAgent is available
-  useEffect(() => {
-    if (uAgentAvailable) {
-      fetchProtocolsList()
-        .then((data) => {
-          if (data && data.protocols) {
-            setProtocolNames(Object.keys(data.protocols));
-          }
-        })
-        .catch((error) => {
-          logger.error('Error fetching protocols list:', error);
-        });
-    }
-  }, [uAgentAvailable]);
-
-  const checkAgent = async () => {
-    try {
-      const isHealthy = await checkUAgentHealth();
-      setUAgentAvailable(isHealthy);
-    } catch (error) {
-      logger.error('Error checking uAgent health:', error);
-      setUAgentAvailable(false);
-    }
-  };
 
   useEffect(() => {
     scrollToBottom();
@@ -139,71 +117,77 @@ export default function FaqChat() {
       return;
     }
 
-    // If uAgent is available, try to get blockchain protocol information
-    if (uAgentAvailable && protocolNames.length > 0) {
-      try {
-        // Extract potential protocol name from question
-        const words = question.toLowerCase().split(/\s+/);
-        const potentialProtocols = words.filter(
-          (word) =>
-            word.length > 2 &&
-            ![
-              'what',
-              'how',
-              'is',
-              'are',
-              'the',
-              'a',
-              'an',
-              'and',
-              'or',
-              'but',
-              'for',
-              'with',
-              'about',
-              'tell',
-              'me',
-              'explain',
-              'works',
-            ].includes(word),
-        );
+    try {
+      // Extract potential protocol name from question
+      const words = question.toLowerCase().split(/\s+/);
+      const potentialProtocols = words.filter(
+        (word) =>
+          word.length > 2 &&
+          ![
+            'what',
+            'how',
+            'is',
+            'are',
+            'the',
+            'a',
+            'an',
+            'and',
+            'or',
+            'but',
+            'for',
+            'with',
+            'about',
+            'tell',
+            'me',
+            'explain',
+            'works',
+          ].includes(word),
+      );
 
-        // First check exact matches with known protocol names
-        const matchedProtocol = potentialProtocols.find((term) =>
-          protocolNames.some((protocol) => protocol.toLowerCase() === term),
-        );
+      // First check exact matches with known protocol names
+      const matchedProtocol = potentialProtocols.find((term) =>
+        protocolNames.some((protocol) => protocol.toLowerCase() === term),
+      );
 
-        if (matchedProtocol) {
-          try {
-            const info = await fetchProtocolInfo(matchedProtocol);
-            addMessage(info, false);
-            setIsLoading(false);
-            return;
-          } catch (error) {
-            logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
-          }
+      if (matchedProtocol) {
+        try {
+          const info = await fetchProtocolInfo(matchedProtocol);
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
+          // Fall through to try other terms or general question
         }
-
-        // Then try each potential term
-        for (const term of potentialProtocols) {
-          try {
-            const info = await fetchProtocolInfo(term);
-            addMessage(info, false);
-            setIsLoading(false);
-            return;
-          } catch (_error) {
-            continue;
-          }
-        }
-
-        // If no specific protocol found, handle as a general question
-        handleGeneralQuestion(question);
-      } catch (error) {
-        logger.error('Error processing with uAgent:', error);
-        handleGeneralQuestion(question);
       }
-    } else {
-      // Fall back to basic keyword matching if uAgent isn't available
+
+      // Then try each potential term
+      for (const term of potentialProtocols) {
+        if (term.length < 3) continue; // Skip very short terms
+
+        try {
+          const info = await fetchProtocolInfo(term);
+          if (info && info.length > 10) {
+            // Make sure we got a meaningful response
+            addMessage(info, false);
+            setIsLoading(false);
+            return;
+          }
+        } catch (_error) {
+          // Continue to next term
+          continue;
+        }
+      }
+
+      // If no specific protocol found, handle as a general question
+      handleGeneralQuestion(question);
+    } catch (error) {
+      logger.error('Error processing with uAgent:', error);
+      // Fall back to general questions
+      addMessage(
+        "I'm currently having trouble connecting to my blockchain information database. Let me try to answer your question with my built-in knowledge instead.",
+        false,
+      );
       handleGeneralQuestion(question);
     }
   };
@@ -284,9 +268,7 @@ export default function FaqChat() {
           <div className="mr-2 h-3 w-3 rounded-full bg-green-400"></div>
           <h3 className="font-medium">
             Emrys FAQ Assistant
-            <span className="ml-2 text-xs opacity-75">
-              (Powered by fetch.ai uAgents{uAgentAvailable ? ' - Connected' : ' - Offline'})
-            </span>
+            <span className="ml-2 text-xs opacity-75">(Powered by fetch.ai uAgents)</span>
           </h3>
         </div>
 
@@ -338,14 +320,12 @@ export default function FaqChat() {
                 >
                   What is Walrus storage?
                 </button>
-                {uAgentAvailable && (
-                  <button
-                    onClick={() => handleQuestionClick('Tell me about blockchain technologies')}
-                    className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
-                  >
-                    Blockchain technologies
-                  </button>
-                )}
+                <button
+                  onClick={() => handleQuestionClick('Tell me about blockchain technologies')}
+                  className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  Blockchain technologies
+                </button>
               </div>
             </div>
           )}

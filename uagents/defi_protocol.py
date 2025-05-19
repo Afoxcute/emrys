@@ -637,4 +637,7 @@ async def get_defi_protocol_info(protocol_name: str) -> str:
                 return result
             
     except Exception as e:
-        return f"Error fetching DeFi protocol information: {str(e)}" 
+        return f"Error fetching DeFi protocol information: {str(e)}"
+
+# Make sure DEFI_PROTOCOLS is exported
+__all__ = ["DeFiProtocolRequest", "DeFiProtocolResponse", "get_defi_protocol_info", "DEFI_PROTOCOLS"] 
