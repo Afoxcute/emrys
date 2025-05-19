@@ -7,6 +7,9 @@ const UAGENT_BASE_URL =
 
 console.log('Connecting to uAgent at:', UAGENT_BASE_URL);
 
+// Generate a random client ID for this session
+const CLIENT_ID = `frontend-client-${Math.random().toString(36).substring(2, 15)}`;
+
 export interface ProtocolInfo {
   timestamp: number;
   protocolName: string;
@@ -25,32 +28,41 @@ export interface ProtocolsListResponse {
  */
 export async function fetchProtocolInfo(protocolName: string): Promise<string> {
   try {
-    // Use the uAgent's built-in /submit endpoint for communication
-    const response = await axios.post(
-      `${UAGENT_BASE_URL}/submit`,
-      {
-        // Format the message according to the uAgent protocol
-        sender: 'frontend-client',
-        destination: 'emrys-defi-agent',
-        message: {
-          protocol_name: protocolName,
-        },
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 10000, // 10 second timeout
-      },
-    );
+    logger.debug(`Fetching information for protocol: ${protocolName}`);
 
-    console.log('Protocol info response:', response.data);
+    // Use the direct DeFiProtocolRequest format
+    const submitPayload = {
+      sender: CLIENT_ID,
+      destination: 'emrys-defi-agent',
+      message: {
+        protocol_name: protocolName,
+      },
+    };
 
-    if (response.data && response.data.information) {
-      return response.data.information;
-    } else if (response.data && response.data.results) {
-      // Handle responses from the DeFiProtocolResponse format
+    // Try to submit directly to the agent
+    const response = await axios.post(`${UAGENT_BASE_URL}/submit`, submitPayload, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 15000, // 15 second timeout to allow for agent processing
+    });
+
+    logger.debug('Protocol info raw response:', response.data);
+
+    // Handle different response formats
+    if (response.data && response.data.results) {
+      // Response from DeFiProtocolResponse
       return response.data.results;
+    } else if (response.data && response.data.information) {
+      // Response from ProtocolInfoResponse
+      return response.data.information;
+    } else if (typeof response.data === 'string') {
+      // Direct string response
+      return response.data;
+    } else if (response.data && response.data.body && response.data.body.results) {
+      // Nested response format sometimes used by uAgents
+      return response.data.body.results;
     } else {
-      throw new Error('Invalid protocol response format');
+      // Fallback to returning whatever we got as a string
+      return JSON.stringify(response.data);
     }
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
@@ -68,17 +80,19 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
  */
 export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   try {
-    // For simplicity, return a static list of protocols
-    // In a production environment, we would use the uAgent's message system
+    // Return a static list of protocols for reliability
     return {
       timestamp: Date.now(),
       protocols: {
         SOON_SVM: 'SOON SVM',
         IBC: 'IBC',
         WALRUS: 'Walrus',
-        ZPL: 'ZPL UTXO Bridge',
+        ZPL_UTXO_BRIDGE: 'ZPL UTXO Bridge',
+        SOLANA: 'Solana',
+        SVM: 'SVM',
+        UTXO: 'UTXO Model',
       },
-      count: 4,
+      count: 7,
     };
   } catch (error) {
     logger.error('Error fetching protocols list:', error);
