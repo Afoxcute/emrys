@@ -10,7 +10,9 @@ from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProto
 
 # Get environment variables or use defaults
 AGENT_NAME = os.getenv("UAGENT_NAME", "emrys-defi-agent")
-AGENT_PORT = int(os.getenv("UAGENT_PORT", "8080"))  # Default to 8080
+
+# Get port from Railway's PORT environment variable or use default 8080
+PORT = int(os.getenv("PORT", "8080"))
 
 # Use the provided Railway URL with fallbacks
 RAILWAY_URL = os.getenv("RAILWAY_URL", "emrys-production.up.railway.app")
@@ -21,11 +23,13 @@ if not RAILWAY_URL.startswith(("http://", "https://")):
 AGENT_ENDPOINT = f"{RAILWAY_URL}/submit"
 
 print(f"Agent endpoint configured as: {AGENT_ENDPOINT}")
+print(f"Agent will run on port: {PORT}")
 
 # Create agent with proper configuration
+# Pass port directly during initialization
 agent = Agent(
     name=AGENT_NAME,
-    port=AGENT_PORT,
+    port=PORT,  # Set the port during agent initialization
     endpoint=[AGENT_ENDPOINT],  # Register endpoint so agent is reachable
 )
 
@@ -57,10 +61,7 @@ agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
 if __name__ == "__main__":
-    # Use port 8080 by default, but allow override by PORT environment variable
-    port = int(os.getenv("PORT", "8080"))
+    print(f"Starting agent with endpoint {AGENT_ENDPOINT}")
     
-    print(f"Starting agent on port {port} with endpoint {AGENT_ENDPOINT}")
-    
-    # Run with just the port parameter (host is not supported)
-    agent.run(port=port) 
+    # Call run() without parameters - the port is already set during initialization
+    agent.run() 
