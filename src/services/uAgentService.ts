@@ -1,15 +1,10 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
-// Get the uAgent base URL from environment variables with a fallback to localhost for development
-const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'http://localhost:8000';
+// Replace with your actual deployed Railway URL
+const UAGENT_BASE_URL =
+  process.env.NEXT_PUBLIC_UAGENT_URL || 'https://your-protocol-agent-production.up.railway.app';
 
-/**
- * Response interface for protocol information
- *
- * @endpoint POST /protocol/info
- * @request { protocolName: string }
- */
 export interface ProtocolInfo {
   timestamp: number;
   protocolName: string;
@@ -17,11 +12,6 @@ export interface ProtocolInfo {
   agent_address: string;
 }
 
-/**
- * Response interface for protocols list
- *
- * @endpoint GET /protocols/list
- */
 export interface ProtocolsListResponse {
   timestamp: number;
   protocols: Record<string, string>;
@@ -30,10 +20,6 @@ export interface ProtocolsListResponse {
 
 /**
  * Fetch information about a specific blockchain protocol from the uAgent
- *
- * @endpoint POST /protocol/info
- * @example
- * const info = await fetchProtocolInfo('solana');
  */
 export async function fetchProtocolInfo(protocolName: string): Promise<string> {
   try {
@@ -49,10 +35,6 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
 
 /**
  * Get list of all available protocols from the uAgent
- *
- * @endpoint GET /protocols/list
- * @example
- * const protocols = await fetchProtocolsList();
  */
 export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   try {
@@ -66,10 +48,6 @@ export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
 
 /**
  * Check if the uAgent service is healthy
- *
- * @endpoint GET /health
- * @example
- * const isHealthy = await checkUAgentHealth();
  */
 export async function checkUAgentHealth(): Promise<boolean> {
   try {
