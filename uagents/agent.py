@@ -12,7 +12,7 @@ from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProto
 AGENT_NAME = os.getenv("UAGENT_NAME", "emrys-defi-agent")
 
 # Railway provides $PORT, we'll use it if available, otherwise default to 8000
-AGENT_PORT = int(os.getenv("PORT", os.getenv("UAGENT_PORT", "8000")))
+AGENT_PORT = int(os.getenv("PORT", os.getenv("UAGENT_PORT", "8080")))
 
 # For Railway, we need to construct the proper endpoint URL
 # Railway sets RAILWAY_PUBLIC_DOMAIN if you've set up a custom domain
