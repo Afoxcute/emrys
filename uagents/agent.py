@@ -20,7 +20,7 @@ agent = Agent(
     name="EmrysProtocolAgent",
     port=PORT,
     endpoint=[f"http://{HOST}:{PORT}/submit"],
-    seed=AGENT_SEED
+    seed=jnhsu6439hwiwu2
 )
 
 proto = QuotaProtocol(
