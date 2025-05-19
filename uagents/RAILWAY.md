@@ -6,7 +6,7 @@ This guide explains how to deploy the Emrys DeFi Agent on Railway.
 
 | Variable | Description | Default Value |
 |----------|-------------|---------------|
-| PORT | Port for the HTTP server | 8080 |
+| PORT | Port for the agent server | 8080 |
 | RAILWAY_URL | Public URL of the railway deployment | emrys-production.up.railway.app |
 | UAGENT_NAME | Name of the uAgent | emrys-defi-agent |
 
@@ -22,13 +22,24 @@ This guide explains how to deploy the Emrys DeFi Agent on Railway.
    web: cd uagents && python agent.py
    ```
 
-## API Endpoints
+## Agent Communication
 
-After deployment, the following endpoints will be available:
+The agent communicates using the uAgent messaging system through the `/submit` endpoint:
 
-- `GET /health` - Health check endpoint
-- `POST /protocol/info` - Get information about a specific protocol
-- `GET /protocols/list` - Get a list of all available protocols
+```
+POST /submit
+```
+
+With body:
+```json
+{
+  "sender": "your-client-id",
+  "destination": "emrys-defi-agent",
+  "message": {
+    "protocol_name": "SOON SVM"
+  }
+}
+```
 
 ## Using with the Frontend
 
@@ -43,14 +54,8 @@ NEXT_PUBLIC_UAGENT_URL=https://your-railway-domain.up.railway.app
 You can test the deployment with curl:
 
 ```bash
-# Health check
-curl https://your-railway-domain.up.railway.app/health
-
-# Get protocols list
-curl https://your-railway-domain.up.railway.app/protocols/list
-
-# Get protocol info
+# Send a message to get protocol info
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"protocolName":"SOON SVM"}' \
-  https://your-railway-domain.up.railway.app/protocol/info
+  -d '{"sender": "test-client", "destination": "emrys-defi-agent", "message": {"protocol_name": "SOON SVM"}}' \
+  https://your-railway-domain.up.railway.app/submit
 ``` 

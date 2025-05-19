@@ -281,25 +281,21 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ***DISCLAIMER:*** *Emrys uses SVM & IBC & WALRUS for secure transactions & speed. All transactions are processed using our proprietary implementation of SVM (Solana Virtual Machine) and IBC (Inter-Blockchain Communication) protocols, with data secured through Walrus decentralized storage.*
 
-## HTTP REST Endpoints
+## Agent Messaging
 
-The Emrys DeFi Agent provides HTTP REST endpoints for accessing protocol information:
-
-### Health Check
-```
-GET /health
-```
-Returns a simple health check response indicating the agent is online.
+The Emrys DeFi Agent provides information through uAgent messaging:
 
 ### Protocol Information
-```
-POST /protocol/info
-```
 
-Request body:
+To request protocol information, send a message to the agent with the following format:
+
 ```json
 {
-  "protocolName": "SOON SVM"
+  "sender": "your-client-id",
+  "destination": "emrys-defi-agent",
+  "message": {
+    "protocol_name": "SOON SVM" 
+  }
 }
 ```
 
@@ -307,29 +303,19 @@ Response:
 ```json
 {
   "timestamp": 1234567890,
-  "protocolName": "SOON SVM",
+  "protocol_name": "SOON SVM",
   "information": "Detailed information about SOON SVM...",
   "agent_address": "agent1abc123..."
 }
 ```
 
 ### Protocols List
-```
-GET /protocols/list
-```
 
-Response:
-```json
-{
-  "timestamp": 1234567890,
-  "protocols": {
-    "SOON_SVM": "SOON SVM",
-    "IBC": "IBC",
-    "Walrus": "Walrus"
-  },
-  "count": 3
-}
-```
+For development purposes, the agent has a static list of supported protocols:
+- SOON SVM
+- IBC
+- Walrus
+- ZPL UTXO Bridge
 
 ## Development Setup
 

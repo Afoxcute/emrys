@@ -4,10 +4,9 @@ import json
 import time
 from pydantic import BaseModel
 
-from uagents import Agent, Context, Model, Protocol
+from uagents import Agent, Context, Model
 from uagents.setup import fund_agent_if_low
 from uagents.experimental.quota import QuotaProtocol, RateLimit
-from uagents.http import getMCPHttpServer, DefaultHandler, Response, Request, http_endpoint
 from uagents_core.models import ErrorMessage
 
 from chat_proto import chat_proto, struct_output_client_proto
@@ -33,8 +32,8 @@ print(f"Agent will run on port: {PORT}")
 # Create agent with proper configuration
 agent = Agent(
     name=AGENT_NAME,
-    port=PORT,  # Set the port during agent initialization
-    endpoint=[AGENT_ENDPOINT],  # Register endpoint so agent is reachable
+    port=PORT,
+    endpoint=[AGENT_ENDPOINT],
 )
 
 # Create protocol for DeFi protocol information
@@ -45,63 +44,66 @@ proto = QuotaProtocol(
     default_rate_limit=RateLimit(window_size_minutes=60, max_requests=30),
 )
 
-# Create REST endpoint-specific models
-class ProtocolInfoRequest(BaseModel):
-    protocolName: str
+# Create protocol info request/response models for agent messaging
+class ProtocolInfoRequest(Model):
+    protocol_name: str
 
-class ProtocolInfoResponse(BaseModel):
+class ProtocolInfoResponse(Model):
     timestamp: int
-    protocolName: str
+    protocol_name: str
     information: str
     agent_address: str
 
-class ProtocolsListResponse(BaseModel):
+class ProtocolsListRequest(Model):
+    pass
+
+class ProtocolsListResponse(Model):
     timestamp: int
     protocols: dict
     count: int
 
-# Define HTTP endpoints using the uagents http_endpoint decorator
-@http_endpoint("GET", "/health")
-async def health_check(request: Request) -> Response:
-    return Response(status=200, body={"status": "ok"})
+# Define health check endpoint handler
+@agent.on_event("startup")
+async def startup():
+    print("Agent started successfully")
 
-@http_endpoint("POST", "/protocol/info")
-async def protocol_info(request: Request) -> Response:
+# Define protocol info endpoint handler
+@proto.on_message(ProtocolInfoRequest, replies={ProtocolInfoResponse, ErrorMessage})
+async def get_protocol_info(ctx: Context, sender: str, msg: ProtocolInfoRequest):
+    ctx.logger.info(f"Received protocol info request for {msg.protocol_name}")
     try:
-        data = await request.json()
-        protocol_name = data.get("protocolName")
+        information = await get_defi_protocol_info(msg.protocol_name)
+        ctx.logger.info(f"Retrieved information for {msg.protocol_name}")
         
-        if not protocol_name:
-            return Response(status=400, body={"error": "Protocol name is required"})
-            
-        # Get protocol info using existing function
-        information = await get_defi_protocol_info(protocol_name)
+        response = ProtocolInfoResponse(
+            timestamp=int(time.time()),
+            protocol_name=msg.protocol_name,
+            information=information,
+            agent_address=agent.address
+        )
         
-        # Return structured response
-        result = {
-            "timestamp": int(time.time()),
-            "protocolName": protocol_name,
-            "information": information,
-            "agent_address": agent.address
-        }
-        
-        return Response(status=200, body=result)
-    except Exception as e:
-        return Response(status=404, body={"error": f"Protocol not found: {str(e)}"})
+        await ctx.send(sender, response)
+    except Exception as err:
+        ctx.logger.error(f"Error retrieving protocol info: {err}")
+        await ctx.send(sender, ErrorMessage(error=str(err)))
 
-@http_endpoint("GET", "/protocols/list")
-async def protocols_list(request: Request) -> Response:
+# Define protocols list endpoint handler
+@proto.on_message(ProtocolsListRequest, replies={ProtocolsListResponse})
+async def get_protocols_list(ctx: Context, sender: str, msg: ProtocolsListRequest):
+    ctx.logger.info("Received protocols list request")
+    
     # Extract all protocols from DEFI_PROTOCOLS dictionary
     protocols = {k: v.get("name", k) for k, v in DEFI_PROTOCOLS.items()}
     
-    result = {
-        "timestamp": int(time.time()),
-        "protocols": protocols,
-        "count": len(protocols)
-    }
+    response = ProtocolsListResponse(
+        timestamp=int(time.time()),
+        protocols=protocols,
+        count=len(protocols)
+    )
     
-    return Response(status=200, body=result)
+    await ctx.send(sender, response)
 
+# Original DeFi protocol info request handler
 @proto.on_message(
     DeFiProtocolRequest, replies={DeFiProtocolResponse, ErrorMessage}
 )
@@ -121,9 +123,6 @@ agent.include(proto, publish_manifest=True)
 agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
-# Setup HTTP server with our endpoints
-http_server = getMCPHttpServer(agent, host="0.0.0.0", port=PORT)
-
 if __name__ == "__main__":
     print(f"Starting agent with endpoint {AGENT_ENDPOINT}")
     print(f"HTTP API available at http://0.0.0.0:{PORT}")
@@ -131,5 +130,5 @@ if __name__ == "__main__":
     # Fund the agent if it's low on funds (optional)
     fund_agent_if_low(agent.wallet.address())
     
-    # Run the agent with the HTTP server
-    agent.run(http_server=http_server) 
+    # Run the agent
+    agent.run() 
