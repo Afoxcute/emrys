@@ -8,7 +8,17 @@ from uagents_core.models import ErrorMessage
 from chat_proto import chat_proto, struct_output_client_proto
 from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProtocolResponse
 
-agent = Agent()
+# Get environment variables or use defaults
+AGENT_NAME = os.getenv("UAGENT_NAME", "emrys-defi-agent")
+AGENT_PORT = int(os.getenv("UAGENT_PORT", "8000"))
+AGENT_ENDPOINT = os.getenv("UAGENT_ENDPOINT", f"http://0.0.0.0:{AGENT_PORT}/submit")
+
+# Create agent with proper configuration
+agent = Agent(
+    name=AGENT_NAME,
+    port=AGENT_PORT,
+    endpoint=[AGENT_ENDPOINT],  # Register endpoint so agent is reachable
+)
 
 proto = QuotaProtocol(
     storage_reference=agent.storage,
@@ -73,11 +83,18 @@ async def handle_health_check(ctx: Context, sender: str, msg: HealthCheck):
     except Exception as err:
         ctx.logger.error(err)
     finally:
-        await ctx.send(sender, AgentHealth(agent_name="solana_cosmos_defi_agent", status=status))
+        await ctx.send(sender, AgentHealth(agent_name=AGENT_NAME, status=status))
 
 agent.include(health_protocol, publish_manifest=True)
 agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
 if __name__ == "__main__":
-    agent.run() 
+    # Get the host to bind to - Railway provides $PORT, we default to 0.0.0.0 to accept all connections
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", AGENT_PORT))
+    
+    print(f"Starting agent on {host}:{port} with endpoint {AGENT_ENDPOINT}")
+    
+    # Run with the proper host and port configuration
+    agent.run(host=host, port=port) 

@@ -117,6 +117,13 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             # Schedule a fallback response in case OpenAI doesn't respond in time
             ctx.storage.set(f"{str(ctx.session)}_fallback_scheduled", "true")
             
+            # Add to active sessions list
+            active_sessions = ctx.storage.get("active_sessions") or ""
+            session_ids = [s.strip() for s in active_sessions.split(",") if s.strip()]
+            if str(ctx.session) not in session_ids:
+                session_ids.append(str(ctx.session))
+                ctx.storage.set("active_sessions", ",".join(session_ids))
+            
             # Send to OpenAI LLM for processing with structured output
             await ctx.send(
                 OPENAI_AGENT_ADDRESS,
@@ -163,6 +170,13 @@ async def handle_structured_output_response(
 
     # Cancel the fallback response since we got a response from OpenAI
     ctx.storage.set(f"{str(ctx.session)}_fallback_scheduled", "false")
+    
+    # Remove from active sessions
+    active_sessions = ctx.storage.get("active_sessions") or ""
+    session_ids = [s.strip() for s in active_sessions.split(",") if s.strip()]
+    if str(ctx.session) in session_ids:
+        session_ids.remove(str(ctx.session))
+        ctx.storage.set("active_sessions", ",".join(session_ids))
 
     original_query = ctx.storage.get(f"{str(ctx.session)}_query") or "unknown query"
     ctx.logger.info(f"Processing structured output for query: {original_query}")
@@ -232,24 +246,28 @@ async def check_for_timeouts(ctx: Context):
     now = datetime.utcnow()
     
     try:
-        # Get all active sessions
-        for key in ctx.storage.keys():
-            if not key.endswith("_request_time"):
-                continue
-                
-            session_id = key.replace("_request_time", "")
+        # Instead of trying to iterate through all keys, we'll check for requests
+        # that have set a specific identifier when they were scheduled
+        active_sessions = ctx.storage.get("active_sessions") or ""
+        session_ids = [s.strip() for s in active_sessions.split(",") if s.strip()]
+        
+        for session_id in session_ids:
             fallback_scheduled = ctx.storage.get(f"{session_id}_fallback_scheduled")
             
             if fallback_scheduled != "true":
                 continue  # Skip if fallback not scheduled or already processed
                 
             # Get the timestamp of the request
-            request_time_str = ctx.storage.get(key)
+            request_time_str = ctx.storage.get(f"{session_id}_request_time")
             if not request_time_str:
                 continue
                 
-            request_time = datetime.fromisoformat(request_time_str)
-            time_elapsed = now - request_time
+            try:
+                request_time = datetime.fromisoformat(request_time_str)
+                time_elapsed = now - request_time
+            except ValueError:
+                ctx.logger.error(f"Invalid timestamp format: {request_time_str}")
+                continue
             
             # If we've waited longer than the timeout, send a fallback response
             if time_elapsed > timedelta(seconds=RESPONSE_TIMEOUT_SECONDS):
@@ -276,6 +294,10 @@ async def check_for_timeouts(ctx: Context):
                         session_sender,
                         create_text_chat(fallback)
                     )
+                    
+                    # Remove from active sessions
+                    updated_sessions = [s for s in session_ids if s != session_id]
+                    ctx.storage.set("active_sessions", ",".join(updated_sessions))
     except Exception as e:
         ctx.logger.error(f"Error in timeout checker: {e}")
 
