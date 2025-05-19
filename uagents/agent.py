@@ -208,6 +208,9 @@ if __name__ == "__main__":
     # Create the aiohttp app
     app = web.Application(middlewares=[cors_middleware])
     
-    # Start the agent with our CORS-enabled app
-    # Note: agent.run() will register all the endpoints
-    agent.run(host=HOST, port=PORT, aiohttp_app=app) 
+    # Use web.run_app directly instead of agent.run with host and port
+    # First register the agent's routes to the app
+    agent.run(aiohttp_app=app)
+    
+    # Instead of letting the agent run the app, run it ourselves
+    web.run_app(app, host=HOST, port=PORT) 
