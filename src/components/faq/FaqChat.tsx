@@ -59,24 +59,13 @@ const faqData = [
   },
 ];
 
-// List of blockchain technologies we can provide detailed information about
-const blockchainTechnologies = [
-  'SOON SVM',
-  'IBC',
-  'Walrus',
-  'ZPL UTXO Bridge',
-  'Solana',
-  'SVM',
-  'UTXO',
-];
-
 export default function FaqChat() {
   const [messages, setMessages] = useState<Message[]>([
     { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [suggestedQuestions] = useState(faqData.map((item) => item.question));
-  const [protocolNames, setProtocolNames] = useState<string[]>(blockchainTechnologies);
+  const [protocolNames, setProtocolNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -85,14 +74,11 @@ export default function FaqChat() {
     fetchProtocolsList()
       .then((data) => {
         if (data && data.protocols) {
-          const protocolList = Object.keys(data.protocols);
-          setProtocolNames([...protocolList, ...blockchainTechnologies]);
+          setProtocolNames(Object.keys(data.protocols));
         }
       })
       .catch((error) => {
         logger.error('Error fetching protocols list:', error);
-        // Fall back to the static list if fetching fails
-        setProtocolNames(blockchainTechnologies);
       });
   }, []);
 
@@ -124,73 +110,6 @@ export default function FaqChat() {
     setInputValue('');
   };
 
-  const checkForProtocolMatch = async (query: string): Promise<boolean> => {
-    // Extract potential protocol terms from the query
-    const words = query.toLowerCase().split(/\s+/);
-    const potentialTerms = words.filter(
-      (word) =>
-        word.length > 2 &&
-        ![
-          'what',
-          'how',
-          'is',
-          'are',
-          'the',
-          'a',
-          'an',
-          'and',
-          'or',
-          'but',
-          'for',
-          'with',
-          'about',
-          'tell',
-          'me',
-          'explain',
-          'works',
-        ].includes(word),
-    );
-
-    // Check for exact matches with known protocol names
-    for (const protocol of protocolNames) {
-      if (query.toLowerCase().includes(protocol.toLowerCase())) {
-        try {
-          logger.debug(`Found protocol match: ${protocol}`);
-          const info = await fetchProtocolInfo(protocol);
-          if (info) {
-            addMessage(info, false);
-            setIsLoading(false);
-            return true;
-          }
-        } catch (error) {
-          logger.error(`Error fetching info for matched protocol ${protocol}:`, error);
-          // Continue to next protocol
-        }
-      }
-    }
-
-    // Try each potential term against the uAgent
-    for (const term of potentialTerms) {
-      if (term.length < 3) continue; // Skip very short terms
-
-      try {
-        logger.debug(`Trying potential term: ${term}`);
-        const info = await fetchProtocolInfo(term);
-        if (info && info.length > 10) {
-          // Make sure we got a meaningful response
-          addMessage(info, false);
-          setIsLoading(false);
-          return true;
-        }
-      } catch (error) {
-        // Continue to next term
-        logger.debug(`No match for term: ${term}`);
-      }
-    }
-
-    return false;
-  };
-
   const processQuestion = async (question: string) => {
     // Basic validation
     if (!question || question.trim() === '') {
@@ -199,13 +118,69 @@ export default function FaqChat() {
     }
 
     try {
-      // First try to match with blockchain technologies via uAgent
-      const foundMatch = await checkForProtocolMatch(question);
+      // Extract potential protocol name from question
+      const words = question.toLowerCase().split(/\s+/);
+      const potentialProtocols = words.filter(
+        (word) =>
+          word.length > 2 &&
+          ![
+            'what',
+            'how',
+            'is',
+            'are',
+            'the',
+            'a',
+            'an',
+            'and',
+            'or',
+            'but',
+            'for',
+            'with',
+            'about',
+            'tell',
+            'me',
+            'explain',
+            'works',
+          ].includes(word),
+      );
 
-      if (!foundMatch) {
-        // If no match found, handle as a general question
-        handleGeneralQuestion(question);
+      // First check exact matches with known protocol names
+      const matchedProtocol = potentialProtocols.find((term) =>
+        protocolNames.some((protocol) => protocol.toLowerCase() === term),
+      );
+
+      if (matchedProtocol) {
+        try {
+          const info = await fetchProtocolInfo(matchedProtocol);
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
+          // Fall through to try other terms or general question
+        }
       }
+
+      // Then try each potential term
+      for (const term of potentialProtocols) {
+        if (term.length < 3) continue; // Skip very short terms
+
+        try {
+          const info = await fetchProtocolInfo(term);
+          if (info && info.length > 10) {
+            // Make sure we got a meaningful response
+            addMessage(info, false);
+            setIsLoading(false);
+            return;
+          }
+        } catch (_error) {
+          // Continue to next term
+          continue;
+        }
+      }
+
+      // If no specific protocol found, handle as a general question
+      handleGeneralQuestion(question);
     } catch (error) {
       logger.error('Error processing with uAgent:', error);
       // Fall back to general questions
@@ -330,7 +305,7 @@ export default function FaqChat() {
             <div className="mt-4">
               <p className="mb-2 text-sm text-gray-500">Suggested questions:</p>
               <div className="flex flex-wrap gap-2">
-                {suggestedQuestions.slice(0, 3).map((question, index) => (
+                {suggestedQuestions.slice(0, 5).map((question, index) => (
                   <button
                     key={index}
                     onClick={() => handleQuestionClick(question)}
@@ -346,16 +321,10 @@ export default function FaqChat() {
                   What is Walrus storage?
                 </button>
                 <button
-                  onClick={() => handleQuestionClick('Tell me about SOON SVM')}
+                  onClick={() => handleQuestionClick('Tell me about blockchain technologies')}
                   className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
                 >
-                  Tell me about SOON SVM
-                </button>
-                <button
-                  onClick={() => handleQuestionClick('What is IBC protocol?')}
-                  className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  What is IBC protocol?
+                  Blockchain technologies
                 </button>
               </div>
             </div>
