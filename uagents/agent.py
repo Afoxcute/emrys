@@ -10,21 +10,15 @@ from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProto
 
 # Get environment variables or use defaults
 AGENT_NAME = os.getenv("UAGENT_NAME", "emrys-defi-agent")
-AGENT_PORT = int(os.getenv("UAGENT_PORT", "8000"))
+AGENT_PORT = int(os.getenv("UAGENT_PORT", "8080"))  # Default to 8080
 
-# For Railway, we need to construct the proper endpoint URL
-# Railway sets RAILWAY_PUBLIC_DOMAIN if you've set up a custom domain
-# or RAILWAY_SERVICE_URL for the default URL
-RAILWAY_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RAILWAY_SERVICE_URL")
+# Use the provided Railway URL with fallbacks
+RAILWAY_URL = os.getenv("RAILWAY_URL", "emrys-production.up.railway.app")
 
-if RAILWAY_URL:
-    # Use the Railway-provided URL for the endpoint
-    if not RAILWAY_URL.startswith(("http://", "https://")):
-        RAILWAY_URL = f"https://{RAILWAY_URL}"
-    AGENT_ENDPOINT = f"{RAILWAY_URL}/submit"
-else:
-    # Fallback for local development
-    AGENT_ENDPOINT = os.getenv("UAGENT_ENDPOINT", f"http://0.0.0.0:{AGENT_PORT}/submit")
+# Construct the endpoint URL
+if not RAILWAY_URL.startswith(("http://", "https://")):
+    RAILWAY_URL = f"https://{RAILWAY_URL}"
+AGENT_ENDPOINT = f"{RAILWAY_URL}/submit"
 
 print(f"Agent endpoint configured as: {AGENT_ENDPOINT}")
 
@@ -105,8 +99,8 @@ agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
 if __name__ == "__main__":
-    # Railway provides $PORT, we'll use it if available, otherwise use AGENT_PORT
-    port = int(os.getenv("PORT", AGENT_PORT))
+    # Use port 8080 by default, but allow override by PORT environment variable
+    port = int(os.getenv("PORT", "8080"))
     
     print(f"Starting agent on port {port} with endpoint {AGENT_ENDPOINT}")
     
