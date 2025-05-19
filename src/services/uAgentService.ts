@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
-// Use the Railway URL for the uAgent
-const UAGENT_BASE_URL =
-  process.env.NEXT_PUBLIC_UAGENT_URL || 'https://emrys-production.up.railway.app';
+// Use Railway URL for uAgent
+const UAGENT_BASE_URL = process.env.NEXT_PUBLIC_UAGENT_URL || 'https://emrys-production.up.railway.app';
 
-console.log('Connecting to uAgent service at:', UAGENT_BASE_URL);
+console.log('Connecting to uAgent at:', UAGENT_BASE_URL);
 
 export interface ProtocolInfo {
   timestamp: number;
@@ -21,38 +20,82 @@ export interface ProtocolsListResponse {
 }
 
 /**
- * Fetch information about a specific blockchain protocol from the uAgent
+ * Fetches information about a specific protocol
  */
 export async function fetchProtocolInfo(protocolName: string): Promise<string> {
   try {
-    const response = await axios.post<ProtocolInfo>(`${UAGENT_BASE_URL}/protocol/info`, {
-      protocolName: protocolName,
-    });
+    const response = await axios.post<ProtocolInfo>(
+      `${UAGENT_BASE_URL}/protocol/info`,
+      { protocolName },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000, // 10 second timeout
+      }
+    );
+    
     console.log('Protocol info response:', response.data);
-    return response.data.information;
+    
+    if (response.data && response.data.information) {
+      return response.data.information;
+    } else {
+      throw new Error('Invalid protocol response format');
+    }
   } catch (error) {
-    logger.error('Error fetching protocol info:', error);
-    throw new Error('Failed to fetch protocol information');
+    if (axios.isAxiosError(error) && error.response) {
+      logger.error(`Error fetching protocol info for ${protocolName}:`, error.response.data);
+      throw new Error(`No information found for ${protocolName}`);
+    } else {
+      logger.error(`Error fetching protocol info for ${protocolName}:`, error);
+      throw new Error('Failed to connect to protocol information service');
+    }
   }
 }
 
 /**
- * Get list of all available protocols from the uAgent
+ * Fetches the list of all available protocols
  */
 export async function fetchProtocolsList(): Promise<ProtocolsListResponse> {
   try {
-    const response = await axios.get<ProtocolsListResponse>(`${UAGENT_BASE_URL}/protocols/list`);
+    const response = await axios.get<ProtocolsListResponse>(
+      `${UAGENT_BASE_URL}/protocols/list`,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000, // 10 second timeout
+      }
+    );
+    
     console.log('Protocols list response:', response.data);
-    return response.data;
+    
+    if (response.data && response.data.protocols) {
+      return response.data;
+    } else {
+      throw new Error('Invalid protocols list response format');
+    }
   } catch (error) {
     logger.error('Error fetching protocols list:', error);
-    throw new Error('Failed to fetch protocols list');
+    throw new Error('Failed to fetch available protocols');
   }
 }
 
 /**
- * Always returns true since we're assuming the agent is available
+ * Checks if the uAgent service is healthy
+ * Always returns true because we're removing the health check functionality
  */
 export async function checkUAgentHealth(): Promise<boolean> {
-  return true;
+  try {
+    // Check health endpoint
+    const response = await axios.get<{status: string}>(
+      `${UAGENT_BASE_URL}/health`,
+      {
+        timeout: 5000, // 5 second timeout
+      }
+    );
+    
+    // Check if the response has status "ok"
+    return response.data?.status === 'ok';
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    // Return true to assume the agent is always available, as requested
+    return true;
+  }
 }

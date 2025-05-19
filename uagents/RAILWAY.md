@@ -1,86 +1,56 @@
-# Emrys Protocol Info Agent for Railway
+# Deploying on Railway
 
-This is a uAgent service that provides information about various blockchain protocols and technologies via REST endpoints.
+This guide explains how to deploy the Emrys DeFi Agent on Railway.
 
-## Deployment on Railway
+## Required Environment Variables
 
-### Setup
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| PORT | Port for the HTTP server | 8080 |
+| RAILWAY_URL | Public URL of the railway deployment | emrys-production.up.railway.app |
+| UAGENT_NAME | Name of the uAgent | emrys-defi-agent |
 
-1. Create a Railway account and project.
-2. Connect your repository to Railway.
-3. Set the following environment variables in Railway:
-   - `PORT`: The port your agent will run on (Railway will assign this automatically)
-   - `AGENT_SEED`: A secure seed phrase for your agent (optional, defaults provided)
-   - `AGENT_ENDPOINT`: The endpoint URL (will be assigned by Railway)
+## Deployment Steps
 
-### Available Endpoints
+1. Create a new Railway project
+2. Link your repository or use direct deployment
+3. Configure the environment variables:
+   - Set `PORT` to the Railway assigned port (usually injected automatically)
+   - Set `RAILWAY_URL` to your Railway domain
+4. Deploy using the Procfile:
+   ```
+   web: cd uagents && python agent.py
+   ```
 
-- **GET /health**: Check if the agent is running properly
-  ```
-  curl https://your-railway-url.railway.app/health
-  ```
+## API Endpoints
 
-- **POST /protocol/info**: Get information about a specific blockchain protocol
-  ```
-  curl -d '{"protocol_name": "solana"}' -H "Content-Type: application/json" -X POST https://your-railway-url.railway.app/protocol/info
-  ```
+After deployment, the following endpoints will be available:
 
-- **GET /protocols/list**: Get a list of all available protocols
-  ```
-  curl https://your-railway-url.railway.app/protocols/list
-  ```
+- `GET /health` - Health check endpoint
+- `POST /protocol/info` - Get information about a specific protocol
+- `GET /protocols/list` - Get a list of all available protocols
 
-### Example Responses
+## Using with the Frontend
 
-**Health Check:**
-```json
-{
-  "status": "healthy",
-  "timestamp": 1694529821
-}
+Update the `.env` file in the frontend project:
+
+```
+NEXT_PUBLIC_UAGENT_URL=https://your-railway-domain.up.railway.app
 ```
 
-**Protocol Info:**
-```json
-{
-  "timestamp": 1694529821,
-  "protocol_name": "solana",
-  "information": "Solana is a high-performance blockchain supporting builders around the world creating crypto apps that scale today...",
-  "agent_address": "agent1q2qavahvzm2yw237g2cq40pe8p590ppysclaffp2dd0gtk9evtxag7c8djd"
-}
-```
+## Testing the Deployment
 
-**Protocol List:**
-```json
-{
-  "timestamp": 1694529821,
-  "protocols": {
-    "solana": "Solana",
-    "svm": "SVM",
-    "soon": "Soon SVM",
-    "walrus": "Walrus",
-    "utxo": "UTXO",
-    "ibc": "IBC",
-    "zpl": "ZPL UTXO Bridge",
-    "walletconnect": "WalletConnect Integration",
-    "mainnet": "Mainnet Deployment"
-  },
-  "count": 9
-}
-```
+You can test the deployment with curl:
 
-## Local Development
+```bash
+# Health check
+curl https://your-railway-domain.up.railway.app/health
 
-To run the agent locally:
+# Get protocols list
+curl https://your-railway-domain.up.railway.app/protocols/list
 
-1. Install the requirements:
-   ```
-   pip install -r requirements.txt
-   ```
-
-2. Run the agent:
-   ```
-   python railway_agent.py
-   ```
-
-3. The agent will be available at `http://localhost:8000` by default. 
+# Get protocol info
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"protocolName":"SOON SVM"}' \
+  https://your-railway-domain.up.railway.app/protocol/info
+``` 

@@ -2,11 +2,12 @@ import os
 from enum import Enum
 import json
 import time
-from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from uagents import Agent, Context, Model
+from uagents import Agent, Context, Model, Protocol
+from uagents.setup import fund_agent_if_low
 from uagents.experimental.quota import QuotaProtocol, RateLimit
+from uagents.http import getMCPHttpServer, DefaultHandler, Response, Request, http_endpoint
 from uagents_core.models import ErrorMessage
 
 from chat_proto import chat_proto, struct_output_client_proto
@@ -29,80 +30,12 @@ AGENT_ENDPOINT = f"{RAILWAY_URL}/submit"
 print(f"Agent endpoint configured as: {AGENT_ENDPOINT}")
 print(f"Agent will run on port: {PORT}")
 
-# Create FastAPI app for HTTP endpoints
-app = FastAPI()
-
-# Create Pydantic model for protocol info request
-class ProtocolInfoRequest(BaseModel):
-    protocolName: str
-
-# Create Pydantic model for protocol info response
-class ProtocolInfoResponse(BaseModel):
-    timestamp: int
-    protocolName: str
-    information: str
-    agent_address: str
-
-# Create Pydantic model for protocols list response
-class ProtocolsListResponse(BaseModel):
-    timestamp: int
-    protocols: dict
-    count: int
-
-@app.post("/protocol/info", response_model=ProtocolInfoResponse)
-async def protocol_info(request: ProtocolInfoRequest):
-    try:
-        # Get protocol info using existing function
-        information = await get_defi_protocol_info(request.protocolName)
-        
-        # Return structured response
-        return {
-            "timestamp": int(time.time()),
-            "protocolName": request.protocolName,
-            "information": information,
-            "agent_address": "emrys-agent"  # Will be set properly after agent initialization
-        }
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Protocol not found: {str(e)}")
-
-@app.get("/protocols/list", response_model=ProtocolsListResponse)
-async def protocols_list():
-    # Extract all protocols from DEFI_PROTOCOLS dictionary
-    protocols = {k: v.get("name", k) for k, v in DEFI_PROTOCOLS.items()}
-    
-    return {
-        "timestamp": int(time.time()),
-        "protocols": protocols,
-        "count": len(protocols)
-    }
-
 # Create agent with proper configuration
-# Pass port directly during initialization
 agent = Agent(
     name=AGENT_NAME,
     port=PORT,  # Set the port during agent initialization
     endpoint=[AGENT_ENDPOINT],  # Register endpoint so agent is reachable
 )
-
-# Mount FastAPI to uAgent with the correct host and port
-agent.include_http_app(app, host="0.0.0.0", port=PORT)
-
-# Update the agent address in the protocol_info endpoint
-@app.post("/protocol/info", response_model=ProtocolInfoResponse)
-async def protocol_info_with_agent(request: ProtocolInfoRequest):
-    try:
-        # Get protocol info using existing function
-        information = await get_defi_protocol_info(request.protocolName)
-        
-        # Return structured response with agent address
-        return {
-            "timestamp": int(time.time()),
-            "protocolName": request.protocolName,
-            "information": information,
-            "agent_address": agent.address
-        }
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Protocol not found: {str(e)}")
 
 # Create protocol for DeFi protocol information
 proto = QuotaProtocol(
@@ -111,6 +44,63 @@ proto = QuotaProtocol(
     version="0.1.0",
     default_rate_limit=RateLimit(window_size_minutes=60, max_requests=30),
 )
+
+# Create REST endpoint-specific models
+class ProtocolInfoRequest(BaseModel):
+    protocolName: str
+
+class ProtocolInfoResponse(BaseModel):
+    timestamp: int
+    protocolName: str
+    information: str
+    agent_address: str
+
+class ProtocolsListResponse(BaseModel):
+    timestamp: int
+    protocols: dict
+    count: int
+
+# Define HTTP endpoints using the uagents http_endpoint decorator
+@http_endpoint("GET", "/health")
+async def health_check(request: Request) -> Response:
+    return Response(status=200, body={"status": "ok"})
+
+@http_endpoint("POST", "/protocol/info")
+async def protocol_info(request: Request) -> Response:
+    try:
+        data = await request.json()
+        protocol_name = data.get("protocolName")
+        
+        if not protocol_name:
+            return Response(status=400, body={"error": "Protocol name is required"})
+            
+        # Get protocol info using existing function
+        information = await get_defi_protocol_info(protocol_name)
+        
+        # Return structured response
+        result = {
+            "timestamp": int(time.time()),
+            "protocolName": protocol_name,
+            "information": information,
+            "agent_address": agent.address
+        }
+        
+        return Response(status=200, body=result)
+    except Exception as e:
+        return Response(status=404, body={"error": f"Protocol not found: {str(e)}"})
+
+@http_endpoint("GET", "/protocols/list")
+async def protocols_list(request: Request) -> Response:
+    # Extract all protocols from DEFI_PROTOCOLS dictionary
+    protocols = {k: v.get("name", k) for k, v in DEFI_PROTOCOLS.items()}
+    
+    result = {
+        "timestamp": int(time.time()),
+        "protocols": protocols,
+        "count": len(protocols)
+    }
+    
+    return Response(status=200, body=result)
 
 @proto.on_message(
     DeFiProtocolRequest, replies={DeFiProtocolResponse, ErrorMessage}
@@ -131,9 +121,15 @@ agent.include(proto, publish_manifest=True)
 agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
+# Setup HTTP server with our endpoints
+http_server = getMCPHttpServer(agent, host="0.0.0.0", port=PORT)
+
 if __name__ == "__main__":
     print(f"Starting agent with endpoint {AGENT_ENDPOINT}")
     print(f"HTTP API available at http://0.0.0.0:{PORT}")
     
-    # Call run() without parameters - the port is already set during initialization
-    agent.run() 
+    # Fund the agent if it's low on funds (optional)
+    fund_agent_if_low(agent.wallet.address())
+    
+    # Run the agent with the HTTP server
+    agent.run(http_server=http_server) 

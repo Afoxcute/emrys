@@ -279,4 +279,70 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-***DISCLAIMER:*** *Emrys uses SVM & IBC & WALRUS for secure transactions & speed. All transactions are processed using our proprietary implementation of SVM (Solana Virtual Machine) and IBC (Inter-Blockchain Communication) protocols, with data secured through Walrus decentralized storage.* 
+***DISCLAIMER:*** *Emrys uses SVM & IBC & WALRUS for secure transactions & speed. All transactions are processed using our proprietary implementation of SVM (Solana Virtual Machine) and IBC (Inter-Blockchain Communication) protocols, with data secured through Walrus decentralized storage.*
+
+## HTTP REST Endpoints
+
+The Emrys DeFi Agent provides HTTP REST endpoints for accessing protocol information:
+
+### Health Check
+```
+GET /health
+```
+Returns a simple health check response indicating the agent is online.
+
+### Protocol Information
+```
+POST /protocol/info
+```
+
+Request body:
+```json
+{
+  "protocolName": "SOON SVM"
+}
+```
+
+Response:
+```json
+{
+  "timestamp": 1234567890,
+  "protocolName": "SOON SVM",
+  "information": "Detailed information about SOON SVM...",
+  "agent_address": "agent1abc123..."
+}
+```
+
+### Protocols List
+```
+GET /protocols/list
+```
+
+Response:
+```json
+{
+  "timestamp": 1234567890,
+  "protocols": {
+    "SOON_SVM": "SOON SVM",
+    "IBC": "IBC",
+    "Walrus": "Walrus"
+  },
+  "count": 3
+}
+```
+
+## Development Setup
+
+To run the agent locally:
+
+1. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. Run the agent:
+   ```
+   ./start.sh
+   ```
+
+The agent will start on port 8080 by default. You can override this by setting the `PORT` environment variable. 
