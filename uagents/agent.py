@@ -10,18 +10,25 @@ from defi_protocol import get_defi_protocol_info, DeFiProtocolRequest, DeFiProto
 
 # Get environment variables or use defaults
 AGENT_NAME = os.getenv("UAGENT_NAME", "emrys-defi-agent")
+AGENT_PORT = int(os.getenv("UAGENT_PORT", "8000"))
 
-# Railway provides $PORT, we'll use it if available, otherwise default to 8000
-AGENT_PORT = int(os.getenv("PORT", os.getenv("UAGENT_PORT", "8000")))
+# For Railway, we need to construct the proper endpoint URL
+# Railway sets RAILWAY_PUBLIC_DOMAIN if you've set up a custom domain
+# or RAILWAY_SERVICE_URL for the default URL
+RAILWAY_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RAILWAY_SERVICE_URL")
 
-# Explicitly use the emrys-production.up.railway.app URL
-APP_URL = os.getenv("APP_URL", "emrys-production.up.railway.app")
-AGENT_ENDPOINT = f"https://{APP_URL}/submit"
+if RAILWAY_URL:
+    # Use the Railway-provided URL for the endpoint
+    if not RAILWAY_URL.startswith(("http://", "https://")):
+        RAILWAY_URL = f"https://{RAILWAY_URL}"
+    AGENT_ENDPOINT = f"{RAILWAY_URL}/submit"
+else:
+    # Fallback for local development
+    AGENT_ENDPOINT = os.getenv("UAGENT_ENDPOINT", f"http://0.0.0.0:{AGENT_PORT}/submit")
 
 print(f"Agent endpoint configured as: {AGENT_ENDPOINT}")
-print(f"Agent will listen on port: {AGENT_PORT}")
 
-# Create agent with proper configuration - port is set here, not in run()
+# Create agent with proper configuration
 agent = Agent(
     name=AGENT_NAME,
     port=AGENT_PORT,
@@ -98,6 +105,10 @@ agent.include(chat_proto, publish_manifest=True)
 agent.include(struct_output_client_proto, publish_manifest=True)
 
 if __name__ == "__main__":
-    print(f"Starting agent on port {AGENT_PORT}")
-    # Run without any parameters - port is already set in the Agent constructor
-    agent.run() 
+    # Railway provides $PORT, we'll use it if available, otherwise use AGENT_PORT
+    port = int(os.getenv("PORT", AGENT_PORT))
+    
+    print(f"Starting agent on port {port} with endpoint {AGENT_ENDPOINT}")
+    
+    # Run with just the port parameter (host is not supported)
+    agent.run(port=port) 
