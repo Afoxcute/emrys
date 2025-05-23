@@ -1,6 +1,6 @@
 import { SpinnerIcon } from '@hyperlane-xyz/widgets';
 import { useEffect, useRef, useState } from 'react';
-import { fetchProtocolInfo, fetchProtocolsList } from '../../services/uAgentService';
+import { fetchProtocolInfo } from '../../services/uAgentService';
 import { logger } from '../../utils/logger';
 import { SolidButton } from '../buttons/SolidButton';
 
@@ -43,19 +43,24 @@ const faqData = [
       'Transfer times vary depending on the chains involved. Most transfers complete within a few minutes, but some may take longer depending on network conditions.',
   },
   {
+    question: 'What is SOON SVM?',
+    answer:
+      'SOON SVM (Solana Virtual Machine) is a custom fork of the Solana Virtual Machine optimized for cross-chain operations. Key features include high-throughput transaction processing, parallel transaction execution, and robust smart contract execution for token locking and minting.',
+  },
+  {
+    question: 'How does IBC work?',
+    answer:
+      "IBC (Inter-Blockchain Communication) is the backbone of Emrys' cross-chain functionality. It provides chain-agnostic messaging between heterogeneous blockchain networks, with light client verification for cryptographic validation and trustless operation without central authorities.",
+  },
+  {
     question: 'What is Walrus storage?',
     answer:
       'Walrus is our decentralized storage solution that securely stores transaction data across multiple networks. It ensures your cross-chain transaction data remains secure, immutable, and easily accessible at all times.',
   },
   {
-    question: 'How does Walrus work?',
+    question: 'What is the ZPL UTXO Bridge?',
     answer:
-      "Walrus utilizes a distributed network to store encrypted fragments of your transaction data across multiple nodes. This ensures data permanence, security, and rapid retrieval regardless of which blockchain you're accessing it from.",
-  },
-  {
-    question: 'What technology powers this chat assistant?',
-    answer:
-      'This chat assistant is powered by fetch.ai uAgents, an advanced AI framework that enables intelligent, autonomous interactions. The uAgents technology allows for context-aware responses and intelligent query handling.',
+      'The ZPL UTXO Bridge is a sophisticated cross-chain solution that connects UTXO chains (Bitcoin, Dogecoin, Litecoin) with Solana. It implements a two-way peg mechanism for fully redeemable assets and employs a hot/cold reserve system for enhanced security.',
   },
 ];
 
@@ -64,22 +69,19 @@ export default function FaqChat() {
     { id: 1, text: 'Hi there! How can I help you with Emrys bridge?', isUser: false },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [suggestedQuestions] = useState(faqData.map((item) => item.question));
-  const [protocolNames, setProtocolNames] = useState<string[]>([]);
+  const [suggestedQuestions] = useState([
+    'What is SOON SVM?',
+    'How does IBC work?',
+    'What is Walrus storage?',
+    'What is the ZPL UTXO Bridge?',
+    'Which chains are supported?',
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load protocol names on component mount
+  // Load suggested questions on component mount
   useEffect(() => {
-    fetchProtocolsList()
-      .then((data) => {
-        if (data && data.protocols) {
-          setProtocolNames(Object.keys(data.protocols));
-        }
-      })
-      .catch((error) => {
-        logger.error('Error fetching protocols list:', error);
-      });
+    // No need to fetch protocol names anymore since we're using static data
   }, []);
 
   useEffect(() => {
@@ -96,8 +98,10 @@ export default function FaqChat() {
   };
 
   const handleQuestionClick = (question: string) => {
-    setInputValue(question);
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+    addMessage(question, true);
+    setIsLoading(true);
+    processQuestion(question);
+    setInputValue('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -118,77 +122,124 @@ export default function FaqChat() {
     }
 
     try {
-      // Extract potential protocol name from question
-      const words = question.toLowerCase().split(/\s+/);
-      const potentialProtocols = words.filter(
-        (word) =>
-          word.length > 2 &&
-          ![
-            'what',
-            'how',
-            'is',
-            'are',
-            'the',
-            'a',
-            'an',
-            'and',
-            'or',
-            'but',
-            'for',
-            'with',
-            'about',
-            'tell',
-            'me',
-            'explain',
-            'works',
-          ].includes(word),
-      );
+      // Extract potential keywords from question
+      const normalizedQuestion = question.toLowerCase().trim();
 
-      // First check exact matches with known protocol names
-      const matchedProtocol = potentialProtocols.find((term) =>
-        protocolNames.some((protocol) => protocol.toLowerCase() === term),
-      );
-
-      if (matchedProtocol) {
+      // Direct matches for common technologies
+      if (
+        normalizedQuestion.includes('soon svm') ||
+        normalizedQuestion.includes('svm') ||
+        normalizedQuestion.includes('solana vm')
+      ) {
         try {
-          const info = await fetchProtocolInfo(matchedProtocol);
+          const info = await fetchProtocolInfo('soon svm');
           addMessage(info, false);
           setIsLoading(false);
           return;
         } catch (error) {
-          logger.error(`Error fetching info for matched protocol ${matchedProtocol}:`, error);
-          // Fall through to try other terms or general question
+          logger.error('Error fetching info for SOON SVM:', error);
         }
       }
 
-      // Then try each potential term
-      for (const term of potentialProtocols) {
-        if (term.length < 3) continue; // Skip very short terms
-
+      if (
+        normalizedQuestion.includes('ibc') ||
+        normalizedQuestion.includes('inter-blockchain') ||
+        normalizedQuestion.includes('interchain')
+      ) {
         try {
-          const info = await fetchProtocolInfo(term);
-          if (info && info.length > 10) {
-            // Make sure we got a meaningful response
-            addMessage(info, false);
-            setIsLoading(false);
-            return;
-          }
-        } catch (_error) {
-          // Continue to next term
+          const info = await fetchProtocolInfo('ibc');
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error('Error fetching info for IBC:', error);
+        }
+      }
+
+      if (
+        normalizedQuestion.includes('walrus') ||
+        normalizedQuestion.includes('storage') ||
+        normalizedQuestion.includes('decentralized storage')
+      ) {
+        try {
+          const info = await fetchProtocolInfo('walrus');
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error('Error fetching info for Walrus:', error);
+        }
+      }
+
+      if (
+        normalizedQuestion.includes('zpl') ||
+        normalizedQuestion.includes('utxo') ||
+        normalizedQuestion.includes('bridge') ||
+        normalizedQuestion.includes('bitcoin')
+      ) {
+        try {
+          const info = await fetchProtocolInfo('zpl');
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error('Error fetching info for ZPL UTXO Bridge:', error);
+        }
+      }
+
+      if (normalizedQuestion.includes('solana')) {
+        try {
+          const info = await fetchProtocolInfo('solana');
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          logger.error('Error fetching info for Solana:', error);
+        }
+      }
+
+      // Extract all meaningful words for a more generic search
+      const words = normalizedQuestion
+        .split(/\s+/)
+        .filter(
+          (word) =>
+            word.length > 3 &&
+            !['what', 'how', 'the', 'for', 'this', 'that', 'with', 'about', 'and', 'are'].includes(
+              word,
+            ),
+        );
+
+      // Try each word as a potential protocol name
+      for (const word of words) {
+        try {
+          const info = await fetchProtocolInfo(word);
+          addMessage(info, false);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          // Continue to next word
           continue;
         }
       }
 
-      // If no specific protocol found, handle as a general question
-      handleGeneralQuestion(question);
+      // If no specific match, use the entire question
+      try {
+        const info = await fetchProtocolInfo(normalizedQuestion);
+        addMessage(info, false);
+      } catch (error) {
+        // Fall back to general questions
+        handleGeneralQuestion(question);
+      }
     } catch (error) {
       logger.error('Error processing with uAgent:', error);
       // Fall back to general questions
       addMessage(
-        "I'm currently having trouble connecting to my blockchain information database. Let me try to answer your question with my built-in knowledge instead.",
+        "I'm currently using my built-in knowledge to answer your question about blockchain technologies.",
         false,
       );
       handleGeneralQuestion(question);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -314,18 +365,6 @@ export default function FaqChat() {
                     {question}
                   </button>
                 ))}
-                <button
-                  onClick={() => handleQuestionClick('What is Walrus storage?')}
-                  className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  What is Walrus storage?
-                </button>
-                <button
-                  onClick={() => handleQuestionClick('Tell me about blockchain technologies')}
-                  className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  Blockchain technologies
-                </button>
               </div>
             </div>
           )}
