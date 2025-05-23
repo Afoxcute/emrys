@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 const UAGENT_BASE_URL =
   process.env.NEXT_PUBLIC_UAGENT_URL || 'https://emrys-production.up.railway.app';
 
-console.log('Connecting to uAgent at:', UAGENT_BASE_URL);
+logger.debug('Connecting to uAgent at:', UAGENT_BASE_URL);
 
 export interface ProtocolInfo {
   timestamp: number;
@@ -33,7 +33,7 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
         sender: 'frontend-client',
         destination: 'emrys-defi-agent',
         message: {
-          protocol_name: protocolName,
+          protocolName: protocolName,
         },
       },
       {
@@ -42,7 +42,7 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
       },
     );
 
-    console.log('Protocol info response:', response.data);
+    logger.debug('Protocol info response:', response.data);
 
     if (response.data && response.data.information) {
       return response.data.information;
