@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import axios from 'axios';
 import { logger } from '../utils/logger';
 
@@ -11,7 +12,8 @@ if (UAGENT_BASE_URL.includes(':8080')) {
   UAGENT_BASE_URL = UAGENT_BASE_URL.replace(':8080', '');
 }
 
-console.log('Connecting to uAgent at:', UAGENT_BASE_URL);
+// Log connection info
+logger.info('Connecting to uAgent at:', UAGENT_BASE_URL);
 
 export interface ProtocolInfo {
   timestamp: number;
@@ -50,7 +52,7 @@ export async function fetchProtocolInfo(protocolName: string): Promise<string> {
     // Check for exact matches or partial matches in static data
     for (const [key, value] of Object.entries(STATIC_PROTOCOL_INFO)) {
       if (key === normalizedName || normalizedName.includes(key) || key.includes(normalizedName)) {
-        console.log(`Using static protocol info for "${normalizedName}"`);
+        logger.debug(`Using static protocol info for "${normalizedName}"`);
         return value;
       }
     }

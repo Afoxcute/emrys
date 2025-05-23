@@ -136,8 +136,8 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
-          logger.error('Error fetching info for SOON SVM:', error);
+        } catch (_error) {
+          logger.error('Error fetching info for SOON SVM:', _error);
         }
       }
 
@@ -151,8 +151,8 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
-          logger.error('Error fetching info for IBC:', error);
+        } catch (_error) {
+          logger.error('Error fetching info for IBC:', _error);
         }
       }
 
@@ -166,8 +166,8 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
-          logger.error('Error fetching info for Walrus:', error);
+        } catch (_error) {
+          logger.error('Error fetching info for Walrus:', _error);
         }
       }
 
@@ -182,8 +182,8 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
-          logger.error('Error fetching info for ZPL UTXO Bridge:', error);
+        } catch (_error) {
+          logger.error('Error fetching info for ZPL UTXO Bridge:', _error);
         }
       }
 
@@ -193,8 +193,8 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
-          logger.error('Error fetching info for Solana:', error);
+        } catch (_error) {
+          logger.error('Error fetching info for Solana:', _error);
         }
       }
 
@@ -216,7 +216,7 @@ export default function FaqChat() {
           addMessage(info, false);
           setIsLoading(false);
           return;
-        } catch (error) {
+        } catch (_error) {
           // Continue to next word
           continue;
         }
@@ -226,12 +226,12 @@ export default function FaqChat() {
       try {
         const info = await fetchProtocolInfo(normalizedQuestion);
         addMessage(info, false);
-      } catch (error) {
+      } catch (_error) {
         // Fall back to general questions
         handleGeneralQuestion(question);
       }
-    } catch (error) {
-      logger.error('Error processing with uAgent:', error);
+    } catch (_error) {
+      logger.error('Error processing with uAgent:', _error);
       // Fall back to general questions
       addMessage(
         "I'm currently using my built-in knowledge to answer your question about blockchain technologies.",
