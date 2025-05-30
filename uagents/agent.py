@@ -64,8 +64,8 @@ class ProtocolsListResponse(Model):
 
 # Define health check endpoint handler
 @agent.on_event("startup")
-async def startup():
-    print("Agent started successfully")
+async def startup(ctx: Context):
+    ctx.logger.info("Agent started successfully")
 
 # Define protocol info endpoint handler
 @proto.on_message(ProtocolInfoRequest, replies={ProtocolInfoResponse, ErrorMessage})
