@@ -15,9 +15,7 @@ const Home: NextPage = () => {
 
   const navigateToBridge = (network: string) => {
     if (network === 'utxo') {
-      window.open('https://utxo-layer.vercel.app', '_blank');
-      setShowDropdown(false);
-      return;
+      router.push('/utxo');
     }
 
     if (network === 'mainnet') {
