@@ -1,6 +1,6 @@
 {
   "name": "@hyperlane-xyz/warp-ui-template",
-  "description": "A web app template for building Hyperlane Warp Route UIs",
+  "description": "",
   "version": "12.1.0",
   "author": "Emrys",
   "dependencies": {
