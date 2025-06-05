@@ -28,7 +28,7 @@ export function UtxoLayout({ children }: PropsWithChildren) {
         className="min-w-screen relative flex h-full min-h-screen w-full flex-col justify-between"
       >
         <Header />
-        <div className="mx-auto flex max-w-screen-xl grow items-center sm:px-4">
+        <div className="mx-auto flex page-wrapper grow items-center sm:px-4">
           <main className="my-4 w-full">{children}</main>
         </div>
         <Socials />

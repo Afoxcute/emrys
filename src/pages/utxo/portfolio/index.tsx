@@ -6,7 +6,7 @@ import PortfolioOverview from "@/components/PortfolioV2/Overview/PortfolioOvervi
 
 export default function PortfolioPage() {
   return (
-    <main className="page-content ds">
+    <main className="page-content ds !w-full">
       <motion.div
         className="text-sys-color-text-primary px-apollo-40 mt-32 text-4xl md:mt-48"
         initial={{ opacity: 0 }}
