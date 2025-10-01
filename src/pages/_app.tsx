@@ -25,7 +25,7 @@ import '../styles/design-system.css';
 import '../styles/globals.css';
 import '../vendor/inpage-metamask';
 import '../vendor/polyfill';
-
+//kk//
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
