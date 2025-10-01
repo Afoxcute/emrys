@@ -105,9 +105,10 @@
     "url": "https://github.com/hyperlane-xyz/hyperlane-warp-ui-template"
   },
   "scripts": {
-    "clean": "rm -rf dist cache .next",
+    "clean": "rm -rf dist cache .next out",
     "dev": "next dev",
     "build": "next build",
+    "build:static": "STATIC_EXPORT=true next build",
     "typecheck": "tsc",
     "lint": "next lint",
     "start": "next start",

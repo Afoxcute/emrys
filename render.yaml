@@ -1,12 +1,12 @@
 services:
-  - type: web
+  - type: static
     name: emrys
-    env: node
-    plan: free
-    buildCommand: yarn install
-    startCommand: yarn start
+    buildCommand: yarn install && yarn build:static
+    staticPublishPath: ./out
     envVars:
       - key: NODE_ENV
         value: production
+      - key: STATIC_EXPORT
+        value: true
       - key: NEXT_PUBLIC_VERSION
         value: 12.1.0
