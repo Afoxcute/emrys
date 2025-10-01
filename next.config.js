@@ -113,52 +113,29 @@ async function getAssetMint(guardianSettingAccountAddress, connection) {
 // === Async Config ===
 
 const createNextConfig = async () => {
-  // For static export, provide fallback values instead of async calls
-  let twoWayPegProgramId = process.env.NEXT_PUBLIC_DEVNET_TWO_WAY_PEG_PROGRAM_ID || '';
-  let liquidityManagementProgramId = process.env.NEXT_PUBLIC_DEVNET_LIQUIDITY_MANAGEMENT_PROGRAM_ID || '';
-  let delegatorProgramId = process.env.NEXT_PUBLIC_DEVNET_DELEGATOR_PROGRAM_ID || '';
-  let layerCaProgramId = process.env.NEXT_PUBLIC_DEVNET_LAYER_CA_PROGRAM_ID || '';
-  let bitcoinSpvProgramId = process.env.NEXT_PUBLIC_DEVNET_BITCOIN_SPV_PROGRAM_ID || '';
-  let regtestAssetMint = process.env.NEXT_PUBLIC_REGTEST_ASSET_MINT || '';
+  const devnetConnection = new Connection(
+    process.env.SOLANA_DEVNET_RPC || 'https://api.devnet.solana.com',
+  );
+  const devnetBootstrapperProgramId = process.env.NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID;
 
-  // Only make async calls if not in static export mode
-  if (process.env.NODE_ENV !== 'production' || process.env.STATIC_EXPORT !== 'true') {
-    try {
-      const devnetConnection = new Connection(
-        process.env.SOLANA_DEVNET_RPC || 'https://api.devnet.solana.com',
-      );
-      const devnetBootstrapperProgramId = process.env.NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID;
+  const {
+    twoWayPegProgramId,
+    liquidityManagementProgramId,
+    delegatorProgramId,
+    layerCaProgramId,
+    bitcoinSpvProgramId,
+  } = await getZplProgramIds(devnetBootstrapperProgramId, devnetConnection);
 
-      if (devnetBootstrapperProgramId) {
-        const programIds = await getZplProgramIds(devnetBootstrapperProgramId, devnetConnection);
-        twoWayPegProgramId = programIds.twoWayPegProgramId;
-        liquidityManagementProgramId = programIds.liquidityManagementProgramId;
-        delegatorProgramId = programIds.delegatorProgramId;
-        layerCaProgramId = programIds.layerCaProgramId;
-        bitcoinSpvProgramId = programIds.bitcoinSpvProgramId;
-      }
-
-      if (process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING) {
-        regtestAssetMint = await getAssetMint(
-          process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING,
-          devnetConnection,
-        );
-      }
-    } catch (error) {
-      console.warn('Failed to fetch program IDs, using fallback values:', error.message);
-    }
-  }
+  const regtestAssetMint = await getAssetMint(
+    process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING,
+    devnetConnection,
+  );
 
   const baseConfig = {
     experimental: {
       missingSuspenseWithCSRBailout: false,
     },
     reactStrictMode: true,
-    output: 'export',
-    trailingSlash: true,
-    images: {
-      unoptimized: true,
-    },
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
@@ -209,7 +186,7 @@ const createNextConfig = async () => {
     env: {
       ...baseConfig.env,
       NEXT_PUBLIC_VERSION: version,
-      NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID: process.env.NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID || '',
+      NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID: devnetBootstrapperProgramId,
       NEXT_PUBLIC_DEVNET_TWO_WAY_PEG_PROGRAM_ID: twoWayPegProgramId,
       NEXT_PUBLIC_DEVNET_LIQUIDITY_MANAGEMENT_PROGRAM_ID: liquidityManagementProgramId,
       NEXT_PUBLIC_DEVNET_DELEGATOR_PROGRAM_ID: delegatorProgramId,

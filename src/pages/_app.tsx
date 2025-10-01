@@ -11,21 +11,20 @@ import { useRouter } from 'next/router';
 import { ToastContainer, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
-import { GeoBlocking } from '../components/GeoBlocking';
 import { AppLayout } from '../components/layout/AppLayout';
 import { UtxoLayout } from '../components/layout/UtxoLayout';
 import { MAIN_FONT } from '../consts/app';
+import { WarpContextInitGate } from '../features/WarpContextInitGate';
 import { CosmosWalletContext } from '../features/wallet/context/CosmosWalletContext';
 import { EvmWalletContext } from '../features/wallet/context/EvmWalletContext';
 import { SolanaWalletContext } from '../features/wallet/context/SolanaWalletContext';
 import { StarknetWalletContext } from '../features/wallet/context/StarknetWalletContext';
-import { WarpContextInitGate } from '../features/WarpContextInitGate';
 import '../styles/aglobals.scss';
 import '../styles/design-system.css';
 import '../styles/globals.css';
 import '../vendor/inpage-metamask';
 import '../vendor/polyfill';
-//kk//
+
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -54,31 +53,29 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={`${MAIN_FONT.variable} font-sans text-black`}>
       <ErrorBoundary>
-        <GeoBlocking>
-          <SolanaWalletProvider>
-            <ZplClientProvider>
-              <BitcoinWalletProvider>
-                <GlobalModals />
-                <QueryClientProvider client={reactQueryClient}>
-                  <WarpContextInitGate>
-                    <EvmWalletContext>
-                      <SolanaWalletContext>
-                        <CosmosWalletContext>
-                          <StarknetWalletContext>
-                            <Layout>
-                              <Component {...pageProps} />
-                              <Analytics />
-                            </Layout>
-                          </StarknetWalletContext>
-                        </CosmosWalletContext>
-                      </SolanaWalletContext>
-                    </EvmWalletContext>
-                  </WarpContextInitGate>
-                </QueryClientProvider>
-              </BitcoinWalletProvider>
-            </ZplClientProvider>
-          </SolanaWalletProvider>
-        </GeoBlocking>
+        <SolanaWalletProvider>
+          <ZplClientProvider>
+            <BitcoinWalletProvider>
+              <GlobalModals />
+              <QueryClientProvider client={reactQueryClient}>
+                <WarpContextInitGate>
+                  <EvmWalletContext>
+                    <SolanaWalletContext>
+                      <CosmosWalletContext>
+                        <StarknetWalletContext>
+                          <Layout>
+                            <Component {...pageProps} />
+                            <Analytics />
+                          </Layout>
+                        </StarknetWalletContext>
+                      </CosmosWalletContext>
+                    </SolanaWalletContext>
+                  </EvmWalletContext>
+                </WarpContextInitGate>
+              </QueryClientProvider>
+            </BitcoinWalletProvider>
+          </ZplClientProvider>
+        </SolanaWalletProvider>
         <ToastContainer transition={Zoom} position="bottom-right" limit={2} />
       </ErrorBoundary>
     </div>
