@@ -39,7 +39,7 @@ const BLOCKED_REGIONS = [
     regions: [
       '43', // Crimea
       '14', // Donetsk
-      '09', // Luhansk
+      '09', // Luhan
     ],
   },
 ];
