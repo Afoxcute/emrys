@@ -7,7 +7,7 @@ export const config = {
 };
 
 const BLOCKED_COUNTRIES = [
-  'CU', // Cuba
+  'CU', // Cuban
   'KP', // North Korea
   'RU', // Russia
   'AF', // Afghanistan
