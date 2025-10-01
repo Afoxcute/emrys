@@ -2991,7 +2991,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/providers@npm:5.8.0, @ethersproject/providers@npm:^5.7.0":
+"@ethersproject/providers@npm:5.8.0, @ethersproject/providers@npm:^5.7.0, @ethersproject/providers@npm:^5.7.2":
   version: 5.8.0
   resolution: "@ethersproject/providers@npm:5.8.0"
   dependencies:
@@ -3571,6 +3571,8 @@ __metadata:
     "@drift-labs/snap-wallet-adapter": "npm:^0.3.0"
     "@emotion/react": "npm:^11.13.3"
     "@emotion/styled": "npm:^11.13.0"
+    "@ethersproject/abi": "npm:^5.7.0"
+    "@ethersproject/providers": "npm:^5.7.2"
     "@headlessui/react": "npm:^2.2.0"
     "@hyperlane-xyz/registry": "npm:14.2.0"
     "@hyperlane-xyz/sdk": "npm:12.5.0"
@@ -3593,7 +3595,7 @@ __metadata:
     "@tailwindcss/typography": "npm:^0.5.16"
     "@tanstack/eslint-plugin-query": "npm:^5.59.20"
     "@tanstack/react-query": "npm:^5.59.20"
-    "@types/node": "npm:^18.11.18"
+    "@types/node": "npm:^22.12.0"
     "@types/react": "npm:^18.3.12"
     "@types/react-dom": "npm:^18.3.1"
     "@typescript-eslint/eslint-plugin": "npm:^8.13.0"
@@ -3616,6 +3618,7 @@ __metadata:
     eslint-config-prettier: "npm:^9.1.0"
     formik: "npm:^2.4.6"
     framer-motion: "npm:^10.16.4"
+    get-starknet-core: "npm:^4.0.0"
     motion: "npm:^12.15.0"
     next: "npm:^15.0.3"
     postcss: "npm:^8.4.47"
@@ -3627,6 +3630,7 @@ __metadata:
     react-toastify: "npm:^10.0.6"
     sass: "npm:^1.89.0"
     scss: "npm:^0.2.4"
+    starknet: "npm:^6.24.1"
     starknetkit: "npm:2.6.1"
     swr: "npm:^2.2.5"
     tailwind-merge: "npm:^3.3.0"
@@ -11742,35 +11746,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0":
-  version: 24.6.1
-  resolution: "@types/node@npm:24.6.1"
+"@types/node@npm:^22.12.0":
+  version: 22.18.8
+  resolution: "@types/node@npm:22.18.8"
   dependencies:
-    undici-types: "npm:~7.13.0"
-  checksum: 10/d841af01cc6a618a5a5aa3f7de6dd7fc2e7e37efee5f603ea1a7c3fceae6b7afc615b2ae483f84b060389735b61aa936e09684e12b4414da46ac66f9b784bcba
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:10.12.18":
-  version: 10.12.18
-  resolution: "@types/node@npm:10.12.18"
-  checksum: 10/cfa39e797eed0f9eb2070315c66a5be3839ba91c57ace4eff63203f2e8c871127dd45fa5a3bd2ee6d7760608ea13f30b4fbd9a7b0b6a71b478162b2eb23d07b6
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:^12.12.54, @types/node@npm:^12.12.6, @types/node@npm:^12.7.1":
-  version: 12.20.55
-  resolution: "@types/node@npm:12.20.55"
-  checksum: 10/1f916a06fff02faadb09a16ed6e31820ce170798b202ef0b14fc244bfbd721938c54a3a99836e185e4414ca461fe96c5bb5c67c3d248f153555b7e6347f061dd
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:^18.11.18":
-  version: 18.19.129
-  resolution: "@types/node@npm:18.19.129"
-  dependencies:
-    undici-types: "npm:~5.26.4"
-  checksum: 10/0db4cb246d6012b1b523661a59c2e8e0b24527f1c02cfa3deb8e0b884492a07f2547c5353f56272b70037408e3dbe690ae923b8073fd7b0814e389148245e59f
+    undici-types: "npm:~6.21.0"
+  checksum: 10/dc8e883680993bebf45ac641af6648fd88a8d6ec0e375ff737221eef6c93b6a4d20311dfc070bb595095adbf9a2a411a9b3d9230a763eb744bb1d8ca831c331c
   languageName: node
   linkType: hard
 
@@ -18717,6 +18698,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"get-starknet-core@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "get-starknet-core@npm:4.0.0"
+  dependencies:
+    "@starknet-io/types-js": "npm:^0.7.7"
+  checksum: 10/e1ae3a3b866dc86d0e8d8b59517ffcdc9b7b47105e5738068d36c957c7cf03e4d6a7c1d36eff355fb65114430b10e9defb909aba94a0df654a115961f90bbed9
+  languageName: node
+  linkType: hard
+
 "get-stream@npm:^5.1.0":
   version: 5.2.0
   resolution: "get-stream@npm:5.2.0"
@@ -24827,7 +24817,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"starknet@npm:^6.23.1":
+"starknet@npm:^6.23.1, starknet@npm:^6.24.1":
   version: 6.24.1
   resolution: "starknet@npm:6.24.1"
   dependencies:
@@ -26045,17 +26035,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~5.26.4":
-  version: 5.26.5
-  resolution: "undici-types@npm:5.26.5"
-  checksum: 10/0097779d94bc0fd26f0418b3a05472410408877279141ded2bd449167be1aed7ea5b76f756562cb3586a07f251b90799bab22d9019ceba49c037c76445f7cddd
-  languageName: node
-  linkType: hard
-
-"undici-types@npm:~7.13.0":
-  version: 7.13.0
-  resolution: "undici-types@npm:7.13.0"
-  checksum: 10/1088ad68dd57981aa6eced5b3f5d74129ac619fbe558b30cb584d6096d32b084ae30d7cdc480d622226e6ffc8d31e01ac30215816439a0d784e0fe64db873b0f
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10/ec8f41aa4359d50f9b59fa61fe3efce3477cc681908c8f84354d8567bb3701fafdddf36ef6bff307024d3feb42c837cf6f670314ba37fc8145e219560e473d14
   languageName: node
   linkType: hard
 
