@@ -1,7 +1,7 @@
 services:
   - type: static
     name: emrys
-    buildCommand: yarn install && yarn build:static
+    buildCommand: node render-build.js
     staticPublishPath: ./out
     envVars:
       - key: NODE_ENV
@@ -10,3 +10,5 @@ services:
         value: true
       - key: NEXT_PUBLIC_VERSION
         value: 12.1.0
+      - key: YARN_ENABLE_IMMUTABLE_INSTALLS
+        value: false

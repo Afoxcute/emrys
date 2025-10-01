@@ -109,6 +109,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:static": "STATIC_EXPORT=true next build",
+    "build:render": "yarn install --frozen-lockfile && yarn build:static",
     "typecheck": "tsc",
     "lint": "next lint",
     "start": "next start",
