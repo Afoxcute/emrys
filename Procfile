@@ -1,1 +1,1 @@
-web: cd uagents && python agent.py 
+web: yarn start 

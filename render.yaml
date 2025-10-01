@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: emrys
+    env: node
+    plan: free
+    buildCommand: yarn install
+    startCommand: yarn start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_VERSION
+        value: 12.1.0
