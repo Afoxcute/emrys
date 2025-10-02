@@ -1,4 +1,4 @@
-# Use Node.js 18 LTS as base image
+# Dockerfile with all caching disabled for Emrys
 FROM node:18-alpine AS base
 
 # Install dependencies
@@ -10,7 +10,7 @@ FROM base AS deps
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 
-# Install dependencies with proper configuration
+# Install dependencies
 RUN corepack enable
 RUN yarn install --frozen-lockfile --network-timeout 100000
 
@@ -26,14 +26,26 @@ COPY .yarnrc.yml ./
 # Copy source code
 COPY . .
 
-# Set environment variables for build
+# Set environment variables to disable all caching
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NEXT_WEBPACK_CACHE=false
+ENV WEBPACK_CACHE=false
+ENV NODE_OPTIONS="--max-old-space-size=4096 --no-experimental-fetch"
 
-# Clean and build with retry logic
+# Clean everything before build
 RUN rm -rf .next node_modules/.cache
-RUN yarn build:docker || (echo "Build failed, retrying..." && rm -rf .next node_modules/.cache && yarn build:docker)
+
+# Build with multiple retry attempts
+RUN yarn build:docker || \
+    (echo "First attempt failed, cleaning and retrying..." && \
+     rm -rf .next node_modules/.cache && \
+     yarn build:docker) || \
+    (echo "Second attempt failed, full clean and retry..." && \
+     rm -rf .next node_modules/.cache .yarn/cache && \
+     yarn install --frozen-lockfile --network-timeout 100000 && \
+     yarn build:docker)
 
 # Production stage
 FROM base AS runner

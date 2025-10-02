@@ -160,10 +160,24 @@ const createNextConfig = async () => {
     output: 'standalone',
     generateEtags: false,
     poweredByHeader: false,
+    // Disable problematic features for Docker builds
+    experimental: {
+      esmExternals: false,
+    },
+    // Disable webpack cache for Docker builds
+    webpack5: true,
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
     webpack(config, options) {
+      // Disable webpack cache for Docker builds
+      config.cache = false;
+      
+      // Disable persistent caching
+      if (config.cache && config.cache.type) {
+        config.cache = false;
+      }
+
       config.module.rules.push({
         test: /\.ya?ml$/,
         use: 'yaml-loader',
@@ -212,6 +226,13 @@ const createNextConfig = async () => {
           })
         );
       }
+
+      // Disable chunking optimizations that cause cache issues
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: false,
+        runtimeChunk: false,
+      };
 
       return config;
     },
