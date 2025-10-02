@@ -157,6 +157,7 @@ const createNextConfig = async () => {
 
   const baseConfig = {
     reactStrictMode: true,
+    output: 'standalone',
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },

@@ -116,7 +116,8 @@
     "lint": "next lint",
     "start": "next start",
     "test": "vitest --watch false",
-    "prettier": "prettier --write ./src"
+    "prettier": "prettier --write ./src",
+    "install:docker": "yarn install --frozen-lockfile --network-timeout 100000"
   },
   "types": "dist/src/index.d.ts",
   "resolutions": {
