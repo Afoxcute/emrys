@@ -113,10 +113,39 @@ async function getAssetMint(guardianSettingAccountAddress, connection) {
 // === Async Config ===
 
 const createNextConfig = async () => {
-  const devnetConnection = new Connection(
-    process.env.SOLANA_DEVNET_RPC || 'https://api.devnet.solana.com',
-  );
-  const devnetBootstrapperProgramId = process.env.NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID;
+  // Fallback values for when Solana network is unavailable
+  const fallbackProgramIds = {
+    twoWayPegProgramId: '11111111111111111111111111111111',
+    liquidityManagementProgramId: '11111111111111111111111111111111',
+    delegatorProgramId: '11111111111111111111111111111111',
+    layerCaProgramId: '11111111111111111111111111111111',
+    bitcoinSpvProgramId: '11111111111111111111111111111111',
+  };
+  
+  const fallbackAssetMint = '11111111111111111111111111111111';
+
+  let programIds = fallbackProgramIds;
+  let regtestAssetMint = fallbackAssetMint;
+  let devnetBootstrapperProgramId = process.env.NEXT_PUBLIC_DEVNET_BOOTSTRAPPER_PROGRAM_ID || '11111111111111111111111111111111';
+
+  try {
+    const devnetConnection = new Connection(
+      process.env.SOLANA_DEVNET_RPC || 'https://api.devnet.solana.com',
+    );
+
+    if (devnetBootstrapperProgramId) {
+      programIds = await getZplProgramIds(devnetBootstrapperProgramId, devnetConnection);
+    }
+
+    if (process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING) {
+      regtestAssetMint = await getAssetMint(
+        process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING,
+        devnetConnection,
+      );
+    }
+  } catch (error) {
+    console.warn('Failed to fetch Solana network data, using fallback values:', error.message);
+  }
 
   const {
     twoWayPegProgramId,
@@ -124,17 +153,9 @@ const createNextConfig = async () => {
     delegatorProgramId,
     layerCaProgramId,
     bitcoinSpvProgramId,
-  } = await getZplProgramIds(devnetBootstrapperProgramId, devnetConnection);
-
-  const regtestAssetMint = await getAssetMint(
-    process.env.NEXT_PUBLIC_REGTEST_DEVNET_TWO_WAY_PEG_GUARDIAN_SETTING,
-    devnetConnection,
-  );
+  } = programIds;
 
   const baseConfig = {
-    experimental: {
-      missingSuspenseWithCSRBailout: false,
-    },
     reactStrictMode: true,
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
