@@ -160,12 +160,21 @@ const createNextConfig = async () => {
     output: 'standalone',
     generateEtags: false,
     poweredByHeader: false,
-    // Disable problematic features for Docker builds
+    // Optimize build performance
     experimental: {
-      esmExternals: false,
+      // Increase build timeout
+      staticPageGenerationTimeout: 300,
+      // Disable some expensive features during build
+      optimizeCss: false,
+      // Reduce memory usage
+      memoryBasedWorkersCount: true,
+      // Skip static generation for problematic pages
+      skipTrailingSlashRedirect: true,
     },
-    // Disable webpack cache for Docker builds
-    webpack5: true,
+    // Disable static optimization for problematic pages
+    trailingSlash: false,
+    // Disable static generation for problematic pages
+    generateStaticParams: false,
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
@@ -232,7 +241,86 @@ const createNextConfig = async () => {
         ...config.optimization,
         splitChunks: false,
         runtimeChunk: false,
+        // Reduce build time
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        usedExports: false,
+        sideEffects: false,
+        // Disable expensive optimizations
+        minimize: false,
+        concatenateModules: false,
       };
+
+      // Handle ESM modules properly
+      config.module.rules.push({
+        test: /\.m?js$/,
+        resolve: {
+          fullySpecified: false,
+        },
+      });
+
+      // Add specific handling for problematic ESM modules
+      config.resolve.alias = {
+        ...config.resolve.alias,
+      };
+
+      // Handle ESM modules in CommonJS context
+      config.module.rules.push({
+        test: /node_modules\/@walletconnect\/.*\.js$/,
+        type: 'javascript/auto',
+        resolve: {
+          fullySpecified: false,
+        },
+      });
+
+      // Handle Solana wallet adapter ESM imports
+      config.module.rules.push({
+        test: /node_modules\/@solana\/wallet-adapter-walletconnect\/.*\.js$/,
+        type: 'javascript/auto',
+        resolve: {
+          fullySpecified: false,
+        },
+      });
+
+      // Add comprehensive ESM support
+      config.resolve.conditionNames = ['import', 'module', 'browser', 'default'];
+      config.resolve.mainFields = ['browser', 'module', 'main'];
+
+      // Add a custom loader for ESM modules that need special handling
+      config.module.rules.push({
+        test: /node_modules\/@solana\/wallet-adapter-walletconnect\/lib\/esm\/index\.js$/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+            plugins: [
+              ['@babel/plugin-transform-modules-commonjs', { strict: false }]
+            ]
+          }
+        }
+      });
+
+      // Ensure proper module resolution for ESM
+      config.resolve.extensionAlias = {
+        '.js': ['.js', '.ts', '.tsx'],
+        '.mjs': ['.mjs', '.js'],
+      };
+
+      // Add ESM support for server-side rendering
+      config.experiments = {
+        ...config.experiments,
+        topLevelAwait: true,
+        asyncWebAssembly: true,
+      };
+
+      // Handle ESM imports in CommonJS context
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new (require('webpack')).DefinePlugin({
+          'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        })
+      );
+
 
       return config;
     },
