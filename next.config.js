@@ -162,19 +162,13 @@ const createNextConfig = async () => {
     poweredByHeader: false,
     // Optimize build performance
     experimental: {
-      // Increase build timeout
-      staticPageGenerationTimeout: 300,
       // Disable some expensive features during build
       optimizeCss: false,
       // Reduce memory usage
       memoryBasedWorkersCount: true,
-      // Skip static generation for problematic pages
-      skipTrailingSlashRedirect: true,
     },
-    // Disable static optimization for problematic pages
-    trailingSlash: false,
-    // Disable static generation for problematic pages
-    generateStaticParams: false,
+    // Skip trailing slash redirects
+    skipTrailingSlashRedirect: true,
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
