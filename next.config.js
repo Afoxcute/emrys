@@ -205,6 +205,15 @@ const createNextConfig = async () => {
             timestamp: false,
           },
         };
+
+        // Disable chunking at the webpack level
+        config.optimization = {
+          ...config.optimization,
+          splitChunks: false,
+          runtimeChunk: false,
+          moduleIds: 'deterministic',
+          chunkIds: 'deterministic',
+        };
       }
 
       config.module.rules.push({
@@ -269,18 +278,9 @@ const createNextConfig = async () => {
         // Disable expensive optimizations
         minimize: false,
         concatenateModules: false,
-        // Completely disable chunking for Docker
+        // Force deterministic IDs
         moduleIds: 'deterministic',
         chunkIds: 'deterministic',
-        // Completely disable chunking
-        splitChunks: false,
-        // Force single chunk
-        runtimeChunk: false,
-        // Disable module concatenation
-        concatenateModules: false,
-        // Disable tree shaking
-        usedExports: false,
-        sideEffects: false,
       };
 
       // Handle ESM modules properly
