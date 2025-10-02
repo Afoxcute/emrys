@@ -1,4 +1,4 @@
-# Use Node.js 18 LTS as base image
+# Robust Dockerfile for Emrys with chunk cache handling
 FROM node:18-alpine AS base
 
 # Install dependencies
@@ -10,7 +10,7 @@ FROM base AS deps
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 
-# Install dependencies with proper configuration
+# Install dependencies
 RUN corepack enable
 RUN yarn install --frozen-lockfile --network-timeout 100000
 
@@ -31,9 +31,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Make build script executable and run it
-RUN chmod +x build-docker.sh
-RUN ./build-docker.sh
+# Clean any existing build artifacts
+RUN rm -rf .next
+
+# Build the application with retry logic
+RUN yarn build:docker || (echo "Build failed, retrying..." && yarn build:docker)
 
 # Production stage
 FROM base AS runner
