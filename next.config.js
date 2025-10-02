@@ -169,10 +169,19 @@ const createNextConfig = async () => {
     },
     // Skip trailing slash redirects
     skipTrailingSlashRedirect: true,
+    // Disable static generation if specified
+    ...(process.env.NEXT_DISABLE_STATIC_GENERATION === 'true' && {
+      output: 'standalone',
+      trailingSlash: false,
+      images: {
+        unoptimized: true,
+      },
+    }),
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
     webpack(config, options) {
+
       // Disable webpack cache for Docker builds
       config.cache = false;
       

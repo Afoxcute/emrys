@@ -127,6 +127,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:docker": "NODE_OPTIONS='--max-old-space-size=4096' NEXT_WEBPACK_CACHE=false next build",
+    "build:docker-custom": "NODE_OPTIONS='--max-old-space-size=4096' NEXT_WEBPACK_CACHE=false WEBPACK_CONFIG=webpack.config.docker.js next build",
     "typecheck": "tsc",
     "lint": "next lint",
     "start": "next start",

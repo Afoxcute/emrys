@@ -1,0 +1,73 @@
+# Dockerfile that uses SSR-only build to avoid chunking issues
+FROM node:18-alpine AS base
+
+# Install dependencies
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install dependencies stage
+FROM base AS deps
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+
+# Install dependencies
+RUN corepack enable
+RUN yarn install --frozen-lockfile --network-timeout 100000
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/.yarn ./.yarn
+COPY .yarnrc.yml ./
+
+# Copy source code
+COPY . .
+
+# Set environment variables to disable ALL caching and chunking
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NEXT_WEBPACK_CACHE=false
+ENV WEBPACK_CACHE=false
+ENV WEBPACK_DISABLE_CACHE=true
+ENV DISABLE_WEBPACK_CACHE=true
+ENV NEXT_BUILD_CACHE=false
+ENV NEXT_DISABLE_STATIC_GENERATION=true
+
+# Clean everything before build
+RUN rm -rf .next node_modules/.cache .yarn/cache
+
+# Build with SSR-only approach
+RUN yarn build:docker || \
+    (echo "Build failed, retrying with SSR-only..." && \
+     rm -rf .next node_modules/.cache .yarn/cache && \
+     NEXT_DISABLE_STATIC_GENERATION=true yarn build:docker)
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create nextjs user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Set permissions
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["node", "server.js"]
