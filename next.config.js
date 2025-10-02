@@ -181,6 +181,32 @@ const createNextConfig = async () => {
         config.cache = false;
       }
 
+      // More aggressive cache disabling for Docker
+      if (process.env.NODE_ENV === 'production') {
+        config.cache = false;
+        delete config.cache;
+        
+        // Disable all webpack caching mechanisms
+        config.snapshot = {
+          managedPaths: [],
+          immutablePaths: [],
+          buildDependencies: {
+            hash: false,
+            timestamp: false,
+          },
+          module: {
+            timestamp: false,
+          },
+          resolve: {
+            timestamp: false,
+          },
+          resolveBuildDependencies: {
+            hash: false,
+            timestamp: false,
+          },
+        };
+      }
+
       config.module.rules.push({
         test: /\.ya?ml$/,
         use: 'yaml-loader',
@@ -243,6 +269,18 @@ const createNextConfig = async () => {
         // Disable expensive optimizations
         minimize: false,
         concatenateModules: false,
+        // Completely disable chunking for Docker
+        moduleIds: 'deterministic',
+        chunkIds: 'deterministic',
+        // Completely disable chunking
+        splitChunks: false,
+        // Force single chunk
+        runtimeChunk: false,
+        // Disable module concatenation
+        concatenateModules: false,
+        // Disable tree shaking
+        usedExports: false,
+        sideEffects: false,
       };
 
       // Handle ESM modules properly
