@@ -35,7 +35,7 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN rm -rf .next
 
 # Build the application with retry logic
-RUN yarn build:docker || (echo "Build failed, retrying..." && yarn build:docker)
+RUN yarn build:docker || (echo "Build failed, retrying..." && rm -rf .next && yarn build:docker)
 
 # Production stage
 FROM base AS runner
