@@ -1,0 +1,31 @@
+# Simple Dockerfile for Emrys
+FROM node:18-alpine
+
+# Install dependencies
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+
+# Install dependencies
+RUN corepack enable
+RUN yarn install --frozen-lockfile --network-timeout 100000
+
+# Copy source code
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build the application
+RUN yarn build:docker
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["yarn", "start"]

@@ -1,11 +1,12 @@
 # Use Node.js 18 LTS as base image
-FROM node:18-alpine
+FROM node:18-alpine AS base
 
 # Install dependencies
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
+# Install dependencies stage
+FROM base AS deps
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 
@@ -13,18 +14,48 @@ COPY .yarn ./.yarn
 RUN corepack enable
 RUN yarn install --frozen-lockfile --network-timeout 100000
 
+# Build stage
+FROM base AS builder
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/.yarn ./.yarn
+COPY .yarnrc.yml ./
+
 # Copy source code
 COPY . .
 
-# Set environment variables
+# Set environment variables for build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build the application
+RUN yarn build:docker
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the application
-RUN yarn build
+# Create nextjs user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Set permissions
+RUN chown -R nextjs:nodejs /app
+USER nextjs
 
 # Expose port
 EXPOSE 3000
 
 # Start the application
-CMD ["yarn", "start"]
+CMD ["node", "server.js"]

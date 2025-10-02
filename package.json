@@ -112,6 +112,7 @@
     "clean": "rm -rf dist cache .next",
     "dev": "next dev",
     "build": "next build",
+    "build:docker": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "typecheck": "tsc",
     "lint": "next lint",
     "start": "next start",

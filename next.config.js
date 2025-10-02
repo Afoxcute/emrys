@@ -158,6 +158,10 @@ const createNextConfig = async () => {
   const baseConfig = {
     reactStrictMode: true,
     output: 'standalone',
+    swcMinify: true,
+    experimental: {
+      esmExternals: 'loose',
+    },
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
@@ -166,6 +170,27 @@ const createNextConfig = async () => {
         test: /\.ya?ml$/,
         use: 'yaml-loader',
       });
+
+      // Optimize chunking for Docker builds
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: {
+              minChunks: 1,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: -10,
+              chunks: 'all',
+            },
+          },
+        },
+      };
 
       if (options.nextRuntime === 'edge') {
         config.resolve.fallback = {
