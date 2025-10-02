@@ -3611,6 +3611,7 @@ __metadata:
     buffer: "npm:^6.0.3"
     clsx: "npm:^2.1.1"
     cosmjs-types: "npm:^0.9.0"
+    crypto-browserify: "npm:^3.12.0"
     d3: "npm:^7.9.0"
     ecpair: "npm:^2.1.0"
     eslint: "npm:^9.14.0"
@@ -3619,12 +3620,17 @@ __metadata:
     formik: "npm:^2.4.6"
     framer-motion: "npm:^10.16.4"
     get-starknet-core: "npm:^4.0.0"
+    global: "npm:^4.4.0"
     motion: "npm:^12.15.0"
     next: "npm:^15.0.3"
+    node-fetch: "npm:^2.7.0"
+    os-browserify: "npm:^0.3.0"
+    path-browserify: "npm:^1.0.1"
     postcss: "npm:^8.4.47"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     prettier-plugin-tailwindcss: "npm:^0.6.8"
+    process: "npm:^0.11.10"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     react-toastify: "npm:^10.0.6"
@@ -3632,6 +3638,7 @@ __metadata:
     scss: "npm:^0.2.4"
     starknet: "npm:^6.24.1"
     starknetkit: "npm:2.6.1"
+    stream-browserify: "npm:^3.0.0"
     swr: "npm:^2.2.5"
     tailwind-merge: "npm:^3.3.0"
     tailwindcss: "npm:^3.4.15"
@@ -3639,9 +3646,11 @@ __metadata:
     ts-node: "npm:^10.9.2"
     typescript: "npm:5.6.3"
     usehooks-ts: "npm:^3.1.1"
+    util: "npm:^0.12.5"
     viem: "npm:^2.21.41"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.0.3"
+    vm-browserify: "npm:^1.1.2"
     wagmi: "npm:^2.12.26"
     yaml: "npm:^2.6.0"
     yaml-loader: "npm:^0.8.1"
@@ -15833,7 +15842,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"crypto-browserify@npm:^3.12.1":
+"crypto-browserify@npm:^3.12.0, crypto-browserify@npm:^3.12.1":
   version: 3.12.1
   resolution: "crypto-browserify@npm:3.12.1"
   dependencies:
@@ -18812,7 +18821,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"global@npm:~4.4.0":
+"global@npm:^4.4.0, global@npm:~4.4.0":
   version: 4.4.0
   resolution: "global@npm:4.4.0"
   dependencies:
@@ -21778,6 +21787,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"os-browserify@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "os-browserify@npm:0.3.0"
+  checksum: 10/16e37ba3c0e6a4c63443c7b55799ce4066d59104143cb637ecb9fce586d5da319cdca786ba1c867abbe3890d2cbf37953f2d51eea85e20dd6c4570d6c54bfebf
+  languageName: node
+  linkType: hard
+
 "os-tmpdir@npm:~1.0.2":
   version: 1.0.2
   resolution: "os-tmpdir@npm:1.0.2"
@@ -22058,6 +22074,13 @@ __metadata:
   bin:
     patch-package: index.js
   checksum: 10/e15b3848f008da2cc659abd6d84dfeab6ed25a999ba25692071c13409f198dad28b6e451ecfebc2139a0847ad8e608575d6724bcc887c56169df8a733b849e79
+  languageName: node
+  linkType: hard
+
+"path-browserify@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "path-browserify@npm:1.0.1"
+  checksum: 10/7e7368a5207e7c6b9051ef045711d0dc3c2b6203e96057e408e6e74d09f383061010d2be95cb8593fe6258a767c3e9fc6b2bfc7ce8d48ae8c3d9f6994cca9ad8
   languageName: node
   linkType: hard
 
@@ -26758,6 +26781,13 @@ __metadata:
   version: 2.0.4
   resolution: "vlq@npm:2.0.4"
   checksum: 10/b2ed0d3a5423f34bba98a18250f8b13a96eebff9c8f9427fa9cd78065d31f35641f6fd659c5642253b79532000a37aec0582abac95d1ef4af2cd0c96a716f1b6
+  languageName: node
+  linkType: hard
+
+"vm-browserify@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "vm-browserify@npm:1.1.2"
+  checksum: 10/ad5b17c9f7a9d9f1ed0e24c897782ab7a587c1fd40f370152482e1af154c7cf0b0bacc45c5ae76a44289881e083ae4ae127808fdff864aa9b562192aae8b5c3b
   languageName: node
   linkType: hard
 

@@ -158,10 +158,6 @@ const createNextConfig = async () => {
   const baseConfig = {
     reactStrictMode: true,
     output: 'standalone',
-    swcMinify: true,
-    experimental: {
-      esmExternals: 'loose',
-    },
     env: {
       CF_PAGES_COMMIT_SHA: process.env.CF_PAGES_COMMIT_SHA,
     },
@@ -170,27 +166,6 @@ const createNextConfig = async () => {
         test: /\.ya?ml$/,
         use: 'yaml-loader',
       });
-
-      // Optimize chunking for Docker builds
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: {
-              minChunks: 1,
-              priority: -20,
-              reuseExistingChunk: true,
-            },
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              priority: -10,
-              chunks: 'all',
-            },
-          },
-        },
-      };
 
       if (options.nextRuntime === 'edge') {
         config.resolve.fallback = {
@@ -204,11 +179,37 @@ const createNextConfig = async () => {
         fs: false,
       };
 
-      config.experiments = {
-        asyncWebAssembly: true,
-        topLevelAwait: true,
-        layers: true,
-      };
+      // Only add polyfills for client-side builds
+      if (!options.isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          global: 'global',
+          process: 'process/browser',
+          buffer: 'buffer',
+          util: 'util',
+          stream: 'stream-browserify',
+          crypto: 'crypto-browserify',
+          vm: 'vm-browserify',
+          os: 'os-browserify/browser',
+          path: 'path-browserify',
+        };
+
+        config.plugins = config.plugins || [];
+        config.plugins.push(
+          new (require('webpack')).ProvidePlugin({
+            process: 'process/browser',
+            Buffer: ['buffer', 'Buffer'],
+            global: 'global',
+          })
+        );
+
+        config.plugins.push(
+          new (require('webpack')).DefinePlugin({
+            'self': 'globalThis',
+            'window': 'globalThis',
+          })
+        );
+      }
 
       return config;
     },
